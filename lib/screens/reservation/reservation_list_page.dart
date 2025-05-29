@@ -50,7 +50,12 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
           final reservations = snapshot.data!;
           if (reservations.isEmpty) {
-            return const Center(child: Text('예매 내역이 없습니다.'));
+            return const Center(
+              child: Text(
+                '예매 내역이 없습니다.',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            );
           }
 
           return ListView.builder(
@@ -109,6 +114,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
                         ),
                         const SizedBox(width: 8),
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             const Text(
                               '예약일',
