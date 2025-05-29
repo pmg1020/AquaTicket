@@ -18,7 +18,6 @@ class _ReservePageState extends State<ReservePage> {
   @override
   void initState() {
     super.initState();
-    // 날짜가 1개면 자동 선택
     if (widget.show.date.length == 1) {
       _selectedDate = widget.show.date.first;
     }
@@ -27,21 +26,55 @@ class _ReservePageState extends State<ReservePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.show.title} 예매')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text('${widget.show.title} 예매'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('공연: ${widget.show.title}', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 20),
+            const Icon(Icons.confirmation_num, size: 48, color: Colors.black87),
+            const SizedBox(height: 16),
+            Text(
+              widget.show.title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 32),
 
             // 날짜 선택
+            const Text('날짜 선택', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
             widget.show.date.length == 1
-                ? Text('날짜: ${widget.show.date.first}', style: const TextStyle(fontSize: 16))
+                ? Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(widget.show.date.first, style: const TextStyle(fontSize: 16)),
+            )
                 : DropdownButtonFormField<String>(
               value: _selectedDate,
-              hint: const Text('날짜 선택'),
+              hint: const Text('날짜를 선택하세요'),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
               items: widget.show.date.map((date) {
                 return DropdownMenuItem(value: date, child: Text(date));
               }).toList(),
@@ -52,25 +85,30 @@ class _ReservePageState extends State<ReservePage> {
               },
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // 인원 선택
-            Row(
-              children: [
-                const Text('인원 수:', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 20),
-                DropdownButton<int>(
-                  value: _selectedPeople,
-                  items: List.generate(10, (i) => i + 1)
-                      .map((num) => DropdownMenuItem(value: num, child: Text('$num명')))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPeople = value!;
-                    });
-                  },
+            const Text('인원 수', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<int>(
+              value: _selectedPeople,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-              ],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              items: List.generate(10, (i) => i + 1)
+                  .map((num) => DropdownMenuItem(value: num, child: Text('$num명')))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedPeople = value!;
+                });
+              },
             ),
 
             const Spacer(),
@@ -95,7 +133,7 @@ class _ReservePageState extends State<ReservePage> {
                       builder: (context) => AlertDialog(
                         title: const Text('예매 완료'),
                         content: Text(
-                          '${widget.show.title} 공연\n날짜: $_selectedDate / 인원: $_selectedPeople명',
+                          '${widget.show.title} 공연\n날짜: $_selectedDate\n인원: $_selectedPeople명',
                         ),
                         actions: [
                           TextButton(
@@ -111,7 +149,15 @@ class _ReservePageState extends State<ReservePage> {
                     );
                   }
                 },
-                child: const Text('예매 확정'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('예매 확정', style: TextStyle(fontSize: 16)),
               ),
             ),
           ],
