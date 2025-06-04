@@ -1,117 +1,53 @@
 import 'package:flutter/material.dart';
-import '../../models/show.dart';
-import '../../services/reservation_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/show.dart'; // Show 모델 정의 위치
+import '../../screens/seat_selection/show_time_selector.dart';
+import '../../screens/seat_selection/captcha_dialog.dart';
+import '../../screens/seat_selection/section_selection_page.dart'; // 다음 단계에서 만들 파일
 
-class ReservePage extends StatefulWidget {
-  final Show show;
+class ReservePage extends StatelessWidget {
+  final Show show; // Firestore에서 받아온 Show 정보
 
   const ReservePage({super.key, required this.show});
 
   @override
-  State<ReservePage> createState() => _ReservePageState();
-}
-
-class _ReservePageState extends State<ReservePage> {
-  int _selectedPeople = 1;
-  String? _selectedDate;
-
-  @override
-  void initState() {
-    super.initState();
-    // 날짜가 1개면 자동 선택
-    if (widget.show.date.length == 1) {
-      _selectedDate = widget.show.date.first;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.show.title} 예매')),
+      appBar: AppBar(title: const Text('예매하기')),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('공연: ${widget.show.title}', style: const TextStyle(fontSize: 18)),
+            Text(show.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-
-            // 날짜 선택
-            widget.show.date.length == 1
-                ? Text('날짜: ${widget.show.date.first}', style: const TextStyle(fontSize: 16))
-                : DropdownButtonFormField<String>(
-              value: _selectedDate,
-              hint: const Text('날짜 선택'),
-              items: widget.show.date.map((date) {
-                return DropdownMenuItem(value: date, child: Text(date));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedDate = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // 인원 선택
-            Row(
-              children: [
-                const Text('인원 수:', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 20),
-                DropdownButton<int>(
-                  value: _selectedPeople,
-                  items: List.generate(10, (i) => i + 1)
-                      .map((num) => DropdownMenuItem(value: num, child: Text('$num명')))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPeople = value!;
-                    });
-                  },
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // 예매 버튼
-            SizedBox(
-              width: double.infinity,
+            Text("공연 장소: ${show.location}", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 40),
+            Center(
               child: ElevatedButton(
-                onPressed: _selectedDate == null
-                    ? null
-                    : () async {
-                  try {
-                    await ReservationService().reserve(
-                      showId: widget.show.id,
-                      showTitle: widget.show.title,
-                      date: _selectedDate!,
-                      people: _selectedPeople,
-                    );
-
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('예매 완료'),
-                        content: Text(
-                          '${widget.show.title} 공연\n날짜: $_selectedDate / 인원: $_selectedPeople명',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('확인'),
-                          ),
-                        ],
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('예매 실패: $e')),
-                    );
-                  }
+                onPressed: () {
+                  showShowTimePicker(
+                    context: context,
+                    showId: show.id,
+                    onTimeSelected: (selectedTime) {
+                      showCaptchaDialog(
+                        context: context,
+                        onVerified: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SectionSelectionPage(
+                                showId: show.id,
+                                selectedDateTime: selectedTime,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
                 },
-                child: const Text('예매 확정'),
+                child: const Text("예매하기"),
               ),
             ),
           ],

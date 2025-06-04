@@ -15,7 +15,6 @@ class ReservationDetailPage extends StatelessWidget {
       return;
     }
 
-    // 🔽 예매 취소 확인 다이얼로그
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -34,7 +33,6 @@ class ReservationDetailPage extends StatelessWidget {
       ),
     );
 
-    // 취소 안 하면 종료
     if (confirm != true) return;
 
     try {
@@ -46,7 +44,6 @@ class ReservationDetailPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('예매가 취소되었습니다.')),
       );
-      // ✅ true를 반환하여 목록 페이지가 갱신되도록
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,36 +58,85 @@ class ReservationDetailPage extends StatelessWidget {
         ? (reservation['reservedAt'] as Timestamp).toDate()
         : null;
 
-    // 공연 날짜가 지났는지 확인
     final showDate = DateTime.tryParse(reservation['date']);
     final isPast = showDate != null && showDate.isBefore(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('예매 상세 정보')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('예매 상세 정보'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('공연명: ${reservation['showTitle']}', style: const TextStyle(fontSize: 20)),
+            const Icon(Icons.receipt_long, size: 48, color: Colors.black87),
+            const SizedBox(height: 24),
+            Text(
+              reservation['showTitle'] ?? '제목 없음',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
             const SizedBox(height: 16),
-            Text('날짜: ${reservation['date']}'),
-            Text('인원 수: ${reservation['people']}명'),
-            Text('예매 일시: $reservedAt'),
+            _infoRow('날짜', reservation['date']),
+            const SizedBox(height: 8),
+            _infoRow('인원 수', '${reservation['people']}명'),
+            const SizedBox(height: 8),
+            _infoRow('예매 일시', reservedAt?.toString().substring(0, 19) ?? 'N/A'),
             const Spacer(),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _cancelReservation(context),
+                onPressed: isPast ? null : () => _cancelReservation(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: isPast ? Colors.grey : Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: Text(isPast ? '취소 불가 (공연 종료)' : '예매 취소'),
+                child: Text(
+                  isPast ? '취소 불가 (공연 종료)' : '예매 취소',
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

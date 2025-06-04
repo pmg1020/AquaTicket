@@ -1,16 +1,52 @@
-# aquatiket
+## 🎟️ AquaTicket - 공연 예약 앱
 
-AquaTiket Flutter project.
+**AquaTicket**은 사용자가 간편하게 공연을 탐색하고, 원하는 공연을 예매하며, 자신의 예약 내역을 확인할 수 있도록 설계된 **Flutter 기반 공연 예약 앱**입니다.
 
-## Getting Started
+### 🔑 주요 기능
 
-This project is a starting point for a Flutter application.
+- 🔐 **회원가입 및 로그인**
+  - Firebase Authentication 기반 이메일 로그인 지원
+  - 자동 로그인 상태 유지 (로그인 유지 기능)
 
-A few resources to get you started if this is your first Flutter project:
+- 🏠 **홈 화면**
+  - 사용자 맞춤형 추천 공연
+  - 최근 예약 정보 간략 요약
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- 🎭 **공연 목록 / 상세 페이지**
+  - 공연 카드로 예쁘게 나열된 목록
+  - 상세 페이지에서 이미지, 설명, 공연 정보 확인 가능
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference...
+- 🎫 **공연 예약 기능**
+  - 공연 선택 후 날짜/시간/좌석 입력 가능
+  - Firebase Firestore를 통한 예약 데이터 저장
+
+- 📋 **예약 내역 확인**
+  - 내가 예약한 공연을 목록으로 확인 가능
+  - 각 예약의 상세 정보도 조회 가능
+
+### 🧩 사용 기술
+
+| 영역        | 기술            |
+|-------------|-----------------|
+| 프론트엔드   | Flutter (Dart)   |
+| 인증        | Firebase Authentication |
+| 데이터베이스 | Firebase Firestore |
+| 상태관리    | StatefulWidget 중심 |
+| 테마        | 밝고 직관적인 디자인 (화이트/블랙 UI) |
+
+### 🎨 디자인 키워드
+
+- 모던하고 심플한 레이아웃
+- 명확하고 쉽게 구분되는 UI 요소
+- 다크모드와 고대비 지원 예정
+
+---
+
+## 🚀 앞으로의 계획
+
+| 작업 항목             | 상태   |
+|----------------------|--------|
+| 공연 검색 기능         | ⏳ 예정 |
+| 사용자 설정 페이지      | ⏳ 예정 |
+| 예약 취소 기능         | ⏳ 예정 |
+| 다크모드 지원         | ⏳ 예정 |

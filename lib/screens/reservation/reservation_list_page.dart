@@ -27,7 +27,16 @@ class _ReservationListPageState extends State<ReservationListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 예매 내역')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+        title: const Text(
+          '내 예매 내역',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _reservationsFuture,
         builder: (context, snapshot) {
@@ -41,34 +50,90 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
           final reservations = snapshot.data!;
           if (reservations.isEmpty) {
-            return const Center(child: Text('예매 내역이 없습니다.'));
+            return const Center(
+              child: Text(
+                '예매 내역이 없습니다.',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: reservations.length,
             itemBuilder: (context, index) {
               final res = reservations[index];
-              return ListTile(
-                leading: const Icon(Icons.confirmation_num),
-                title: Text(res['showTitle'] ?? ''),
-                subtitle: Text('날짜: ${res['date']} / 인원: ${res['people']}명'),
-                trailing: Text((res['reservedAt'] as Timestamp).toDate().toString().substring(0, 10)),
+              final reservedAt = (res['reservedAt'] as Timestamp).toDate();
+              return GestureDetector(
                 onTap: () async {
-                  // ✅ 상세 페이지로 이동하고 결과 받기
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ReservationDetailPage(reservation: res),
                     ),
                   );
-
-                  // ✅ 취소 후 true 반환되면 목록 다시 불러오기
                   if (result == true) {
                     setState(() {
                       _loadReservations();
                     });
                   }
                 },
+                child: Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.confirmation_num, size: 36, color: Colors.black87),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                res['showTitle'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '날짜: ${res['date']} / 인원: ${res['people']}명',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text(
+                              '예약일',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                            Text(
+                              reservedAt.toString().substring(0, 10),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           );
