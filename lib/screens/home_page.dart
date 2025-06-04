@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'login_page.dart';
 import 'show/show_list_page.dart';
 import 'reservation/reservation_list_page.dart';
+import '../admin/admin_venue_setup_page.dart';
+import '../admin/admin_show_create_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -17,6 +20,9 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isAdmin = user?.email == 'admin@example.com'; // 원하는 이메일 설정
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -88,7 +94,54 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
+
             const Spacer(),
+
+            if (isAdmin) ...[
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminVenueSetupPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings),
+                label: const Text('공연장 초기화'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminShowCreatePage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_business),
+                label: const Text('공연 등록'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
             const Text(
               '즐거운 관람 되세요 🎉',
               textAlign: TextAlign.center,
