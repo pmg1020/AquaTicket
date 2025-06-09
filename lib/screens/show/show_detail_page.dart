@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/show.dart';
-import '../reservation/reserve_page.dart';
+import '../seat_selection/show_time_selector.dart';
+import '../seat_selection/captcha_dialog.dart';
+import '../seat_selection/section_selection_page.dart';
 
 class ShowDetailPage extends StatelessWidget {
   final Show show;
@@ -88,11 +90,25 @@ class ShowDetailPage extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ReservePage(show: show),
-                    ),
+                  showShowTimePicker(
+                    context: context,
+                    showId: show.id,
+                    onTimeSelected: (selectedTime) {
+                      showCaptchaDialog(
+                        context: context,
+                        onVerified: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SectionSelectionPage(
+                                showId: show.id,
+                                selectedDateTime: selectedTime,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   );
                 },
                 style: ElevatedButton.styleFrom(
