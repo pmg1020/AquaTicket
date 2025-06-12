@@ -4,7 +4,8 @@ class Show {
   final String type;
   final String location;
   final List<String> date;
-  final String venueId; // ✅ 추가
+  final String venueId;
+  final int maxTicketsPerUser; // ✅ 추가
 
   Show({
     required this.id,
@@ -12,7 +13,8 @@ class Show {
     required this.type,
     required this.location,
     required this.date,
-    required this.venueId, // ✅ 생성자에도 추가
+    required this.venueId,
+    required this.maxTicketsPerUser, // ✅ 생성자에도 추가
   });
 
   factory Show.fromMap(String id, Map<String, dynamic> data) {
@@ -22,7 +24,9 @@ class Show {
       type: data['type'] ?? '',
       location: data['location'] ?? '',
       date: List<String>.from(data['date'] ?? []),
-      venueId: data['venueId'] ?? '', // ✅ 매핑 추가
+      venueId: data['venueId'] ?? '',
+      maxTicketsPerUser: data['maxTicketsPerUser'] ?? 1, // ✅ 매핑 추가 (기본값 1)
     );
   }
 }
+    
