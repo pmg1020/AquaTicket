@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // 날짜 포맷팅을 위해 intl 패키지 필요
 import '../../models/show.dart';
 import '../../services/show_service.dart';
 import 'show_detail_page.dart';
@@ -50,6 +51,19 @@ class _ShowListPageState extends State<ShowListPage> {
             itemCount: shows.length,
             itemBuilder: (context, index) {
               final show = shows[index];
+
+              // 날짜 포맷팅 로직
+              String displayDate = '날짜 없음';
+              if (show.date.isNotEmpty) {
+                try {
+                  // 첫 번째 날짜/시간 문자열만 가져와서 파싱
+                  final dateTime = DateTime.parse(show.date[0]);
+                  displayDate = DateFormat('yyyy-MM-dd').format(dateTime); // YYYY-MM-DD 형식으로 포맷팅
+                } catch (e) {
+                  displayDate = '날짜 오류'; // 파싱 실패 시
+                }
+              }
+
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -98,7 +112,7 @@ class _ShowListPageState extends State<ShowListPage> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          show.date.isNotEmpty ? show.date[0] : '날짜 없음',
+                          displayDate, // 포맷팅된 날짜 표시
                           style: const TextStyle(
                             color: Colors.black54,
                             fontWeight: FontWeight.w500,
