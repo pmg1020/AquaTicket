@@ -5,6 +5,7 @@ import '../reservation/reservation_confirmation_page.dart';
 import 'widgets/main_canvas_layout.dart';
 import 'widgets/detail_canvas_layout.dart';
 import 'widgets/outer_seating_block.dart';
+import 'show_time_selector.dart';
 
 
 class MainHallCanvasPage extends StatefulWidget {
