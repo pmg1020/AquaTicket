@@ -6,8 +6,8 @@ import 'show/show_list_page.dart';
 import 'reservation/reservation_list_page.dart';
 import '../admin/admin_venue_setup_page.dart';
 import '../admin/admin_show_create_page.dart';
-import '../admin/main_hall_seat_initializer_page.dart'; // 🔥 파일 이름 변경 반영
-import 'seat_selection/main_hall_canvas_page.dart'; // ✅ 파일 이름 변경 반영
+import '../admin/main_hall_seat_initializer_page.dart';
+import 'seat_selection/main_hall_canvas_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -123,18 +123,17 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // ✅ 추가된 고척돔 좌석 초기화 버튼
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const MainHallSeatInitializerPage(), // 클래스 이름 변경
+                      builder: (context) => const MainHallSeatInitializerPage(),
                     ),
                   );
                 },
                 icon: const Icon(Icons.event_seat),
-                label: const Text('메인홀 좌석 초기화'), // 버튼 텍스트도 변경
+                label: const Text('메인홀 좌석 초기화'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
@@ -146,24 +145,24 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // ✅ 추가된 캔버스 좌석도 보기 버튼 (테스트용 더미 데이터 전달)
+              // ✅ 캔버스 좌석도 보기 버튼 (테스트용 더미 데이터 전달 - 실제 예매된 값으로 변경)
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => MainHallCanvasPage( // 클래스 이름 변경
-                        showId: 'test_show_id', // 더미 ID
-                        showTitle: '테스트 공연', // 더미 제목
-                        selectedDateTime: '2025-07-19T18:00:00', // 더미 날짜
-                        venueId: 'main_hall', // venueId도 'main_hall'로 변경
-                        maxTicketsPerUser: 4, // 더미 최대 매수
+                      builder: (context) => MainHallCanvasPage(
+                        showId: 'HOzESJZICTCIeLvITbGO', // ✅ 실제 예매된 showId
+                        showTitle: '테스트', // ✅ 실제 예매된 showTitle
+                        selectedDateTime: '2025-06-11 20:00', // ✅ 실제 예매된 dateTime
+                        venueId: 'main_hall', // ✅ Firebase에 초기화된 venueId
+                        maxTicketsPerUser: 4,
                       ),
                     ),
                   );
                 },
                 icon: const Icon(Icons.map),
-                label: const Text('메인홀 좌석 배치도 보기'), // 버튼 텍스트도 변경
+                label: const Text('메인홀 좌석 배치도 보기'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
