@@ -6,7 +6,6 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> signUp(String email, String password, String nickname) async {
-    // Firebase Auth를 통해 회원가입
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -14,8 +13,11 @@ class AuthService {
 
     User? user = userCredential.user;
     if (user != null) {
-      // Firestore에 사용자 정보 저장 (닉네임 포함)
-      await _firestore.collection('users').doc(user.uid).set({
+      // ✅ Firestore에 사용자 정보 저장 경로: users/{user.uid} (최상위 컬렉션)
+      await _firestore
+          .collection('users') // 'users' 컬렉션 (루트 레벨)
+          .doc(user.uid)
+          .set({
         'email': user.email,
         'uid': user.uid,
         'nickname': nickname,

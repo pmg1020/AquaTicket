@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // 날짜 포맷팅을 위해 intl 패키지 임포트
 import '../reservation/reservation_confirmation_page.dart';
 import 'widgets/main_canvas_layout.dart';
 import 'widgets/detail_canvas_layout.dart';
 import 'widgets/outer_seating_block.dart';
-import 'show_time_selector.dart';
+import 'show_time_selector.dart'; // show_time_selector.dart 임포트
 
 
 class MainHallCanvasPage extends StatefulWidget {
@@ -81,174 +81,6 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
     }
   }
 
-  // 하단 팝업을 통해 날짜 및 회차를 변경하는 함수
-  Future<void> _showChangeDateTimeBottomSheet(BuildContext context) async {
-    DateTime tempPickedDate = _selectedDate;
-    TimeOfDay? tempPickedTime = _selectedTime;
-    List<TimeOfDay> availableTimesForSelectedDate = [];
-    bool isLoadingTimes = true;
-
-    Future<List<TimeOfDay>> fetchAvailableTimes(DateTime date) async {
-      print("Fetching available times for ${DateFormat('yyyy-MM-dd').format(date)}...");
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
-        return [
-          const TimeOfDay(hour: 14, minute: 0),
-          const TimeOfDay(hour: 18, minute: 30),
-        ];
-      } else {
-        return [
-          const TimeOfDay(hour: 19, minute: 0),
-        ];
-      }
-    }
-
-    availableTimesForSelectedDate = await fetchAvailableTimes(tempPickedDate);
-    isLoadingTimes = false;
-    if (availableTimesForSelectedDate.isNotEmpty) {
-      if (tempPickedTime == null || !availableTimesForSelectedDate.contains(tempPickedTime)) {
-        tempPickedTime = availableTimesForSelectedDate.first;
-      }
-    } else {
-      tempPickedTime = null;
-    }
-
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext modalContext, StateSetter setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                  top: 20, left: 20, right: 20,
-                  bottom: MediaQuery.of(modalContext).viewInsets.bottom + 20
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      "날짜 및 회차 변경",
-                      style: Theme.of(modalContext).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 20),
-                    ListTile(
-                      title: Text("날짜: ${DateFormat('yyyy년 MM월 dd일 EEEE', 'ko_KR').format(tempPickedDate)}"),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final DateTime? pickedDate = await showDatePicker(
-                          context: modalContext,
-                          initialDate: tempPickedDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                          locale: const Locale('ko', 'KR'),
-                        );
-                        if (pickedDate != null && pickedDate != tempPickedDate) {
-                          setModalState(() {
-                            tempPickedDate = pickedDate;
-                            isLoadingTimes = true;
-                            availableTimesForSelectedDate = [];
-                            tempPickedTime = null;
-                          });
-                          List<TimeOfDay> newTimes = await fetchAvailableTimes(tempPickedDate);
-                          setModalState(() {
-                            availableTimesForSelectedDate = newTimes;
-                            if (availableTimesForSelectedDate.isNotEmpty) {
-                              tempPickedTime = availableTimesForSelectedDate.first;
-                            }
-                            isLoadingTimes = false;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    const Text("시간 선택:", style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 5),
-                    if (isLoadingTimes)
-                      const Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator()))
-                    else if (availableTimesForSelectedDate.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Center(child: Text("선택하신 날짜에 예매 가능한 회차가 없습니다.")),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8.0,
-                        children: availableTimesForSelectedDate.map((time) {
-                          bool isSelected = tempPickedTime == time;
-                          return ChoiceChip(
-                            label: Text(
-                              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                              style: TextStyle(color: isSelected ? Colors.white : Colors.black),
-                            ),
-                            selected: isSelected,
-                            selectedColor: Theme.of(modalContext).primaryColor,
-                            backgroundColor: Colors.grey[200],
-                            onSelected: (bool selected) {
-                              if (selected) {
-                                setModalState(() {
-                                  tempPickedTime = time;
-                                });
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          child: const Text("취소"),
-                          onPressed: () => Navigator.pop(sheetContext),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          child: const Text("선택 완료"),
-                          onPressed: (tempPickedDate != null && tempPickedTime != null)
-                              ? () {
-                            Navigator.pop(sheetContext, {
-                              'date': tempPickedDate,
-                              'time': tempPickedTime,
-                            });
-                          }
-                              : null,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    if (result != null && result['date'] != null && result['time'] != null) {
-      if (mounted) {
-        setState(() {
-          _selectedDate = result['date'];
-          _selectedTime = result['time'];
-
-          if (_selectedSectionName.isNotEmpty && _currentView == 'detail') {
-            _loadSeatsForSection(_selectedSectionName);
-          } else if (_currentView == 'main') {
-            selectedSeats.clear();
-            totalPrice = 0;
-          }
-          print("날짜/시간 변경 완료: $_selectedDate ${_selectedTime.format(context)}");
-        });
-      }
-    }
-  }
-
   // 맵의 구역 클릭 시 호출되는 팝업 함수
   void _showZoneSelectionDialog(BuildContext context, String sectionName) {
     showDialog(
@@ -292,6 +124,8 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
+      print("Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute))}");
+
       final sectionRef = _firestore
           .collection('venues')
           .doc(widget.venueId)
@@ -300,8 +134,9 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
       final sectionSnap = await sectionRef.get();
       final sectionData = sectionSnap.data();
-      if (sectionData == null) {
-        print("섹션 데이터 없음: $sectionName");
+
+      if (sectionData == null || sectionData['rows'] == null || sectionData['columns'] == null) {
+        print("섹션 데이터 불완전하거나 없음: $sectionName. Data: $sectionData");
         if(mounted) {
           setState(() {
             rows = 0;
@@ -323,22 +158,62 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         });
       }
 
-      final seatQuery = await sectionRef.collection('seats').get();
-      final seatMap = <String, Map<String, dynamic>>{};
-      for (var doc in seatQuery.docs) {
-        seatMap[doc.id] = doc.data();
+      final String currentSelectedDateTimeString =
+          "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
+      print("Querying reservations for showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
+
+      Set<String> currentlyReservedSeatNumbers = {};
+      final appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
+
+      final usersSnapshot = await _firestore.collection('artifacts').doc(appId).collection('users').get();
+
+      for (var userDoc in usersSnapshot.docs) {
+        final userId = userDoc.id;
+        final userReservationsSnapshot = await _firestore
+            .collection('artifacts')
+            .doc(appId)
+            .collection('users')
+            .doc(userId)
+            .collection('reservations')
+            .where('showId', isEqualTo: widget.showId)
+            .where('dateTime', isEqualTo: currentSelectedDateTimeString)
+            .where('section', isEqualTo: sectionName)
+            .get();
+
+        for (var resDoc in userReservationsSnapshot.docs) {
+          final List<dynamic> bookedSeats = resDoc.data()['seats'] ?? [];
+          print("Found reservation doc ${resDoc.id}, seats: $bookedSeats"); // Debugging
+          for (var seat in bookedSeats) {
+            currentlyReservedSeatNumbers.add(seat as String);
+          }
+        }
       }
+      print("총 예약된 좌석 수 (이 회차, 이 섹션): ${currentlyReservedSeatNumbers.length}");
+      print("예약된 좌석 번호 목록: $currentlyReservedSeatNumbers"); // Debugging
+
 
       List<List<Map<String, dynamic>>> tempSeats = [];
-      for (int r = 1; r <= (sectionData['rows'] ?? 0); r++) {
+      final allSeatsInThisSectionQuery = await sectionRef.collection('seats').get();
+      final Map<String, Map<String, dynamic>> allSeatsMap = {
+        for (var doc in allSeatsInThisSectionQuery.docs)
+          doc.id: doc.data()
+      };
+
+
+      for (int r = 1; r <= rows; r++) {
         List<Map<String, dynamic>> rowSeats = [];
-        for (int c = 1; c <= (sectionData['columns'] ?? 0); c++) {
+        for (int c = 1; c <= columns; c++) {
           final seatNumber = '$sectionName-$r-$c';
+          final bool isReservedForThisShow = currentlyReservedSeatNumbers.contains(seatNumber);
+
+          String seatGrade = allSeatsMap[seatNumber]?['grade'] ?? 'NORMAL';
+          int seatPrice = _getSeatPrice(seatGrade);
+
           rowSeats.add({
             'seatNumber': seatNumber,
-            'isReserved': seatMap[seatNumber]?['isReserved'] ?? false,
-            'grade': sectionData['grade'] ?? 'NORMAL',
-            'price': _getSeatPrice(sectionData['grade'] ?? 'NORMAL'),
+            'isReserved': isReservedForThisShow,
+            'grade': seatGrade,
+            'price': seatPrice,
           });
         }
         tempSeats.add(rowSeats);
@@ -349,8 +224,13 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           seats = tempSeats;
         });
       }
+      print("좌석 그리드 데이터 생성 완료. Rows: $rows, Columns: $columns");
     } catch (e) {
       print("좌석 불러오기 오류 ($sectionName): $e");
+      if (e is FirebaseException) {
+        print("Firebase Exception Code: ${e.code}");
+        print("Firebase Exception Message: ${e.message}");
+      }
       if(mounted) {
         setState(() {
           rows = 0;
@@ -456,6 +336,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
     final String currentSelectedDateTimeString =
         "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
 
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentView == 'main' ? widget.showTitle : _selectedSectionName),
@@ -480,7 +361,26 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           ? MainCanvasLayout(
         showTitle: widget.showTitle,
         selectedDate: currentFullDateTime,
-        onDateChangePressed: () => _showChangeDateTimeBottomSheet(context),
+        onDateChangePressed: () {
+          showShowTimePicker( // ✅ await 제거
+            context: context,
+            showId: widget.showId,
+            onTimeSelected: (selectedTimeStr) {
+              final parsedDateTime = DateTime.parse(selectedTimeStr.replaceFirst(' ', 'T'));
+              if(mounted) {
+                setState(() {
+                  _selectedDate = DateTime(parsedDateTime.year, parsedDateTime.month, parsedDateTime.day);
+                  _selectedTime = TimeOfDay(hour: parsedDateTime.hour, minute: parsedDateTime.minute);
+                  _selectedSectionName = '';
+                  _selectedGrade = null;
+                  selectedSeats = [];
+                  totalPrice = 0;
+                });
+              }
+              _loadAllVenueSections();
+            },
+          );
+        },
         selectedGrade: _selectedGrade,
         onGradeSelected: (grade) {
           if (mounted) {
