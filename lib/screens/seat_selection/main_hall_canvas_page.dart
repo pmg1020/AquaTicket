@@ -124,10 +124,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
-      final selectedDateTimeObj = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
-      final queryDateTimeString = DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTimeObj); // ✅ 쿼리할 날짜/시간 문자열 형식 통일
-
-      print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: $queryDateTimeString");
+      print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute))}");
 
       final sectionRef = _firestore
           .collection('venues')
@@ -161,24 +158,20 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         });
       }
 
-      // 쿼리 파라미터와 정확히 일치하는 형식의 문자열 생성
-      final String currentSelectedDateTimeString = queryDateTimeString; // ✅ 통일된 문자열 사용
+      final String currentSelectedDateTimeString =
+          "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
       print("Debug LoadSeats: Querying reservations with -> showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
 
       Set<String> currentlyReservedSeatNumbers = {};
       final appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
 
-      // 모든 사용자의 예약 정보를 조회 (이 부분에서 permission-denied가 발생하지 않도록 규칙 수정 필요)
-      // `users` 컬렉션에 대한 `allow read: if request.auth != null;` 규칙이 필요
       final usersSnapshot = await _firestore.collection('artifacts').doc(appId).collection('users').get();
 
-      // ✅ 디버그 출력: usersSnapshot에 문서가 몇 개 있는지
       print("Debug LoadSeats: usersSnapshot docs count: ${usersSnapshot.docs.length}");
 
 
       for (var userDoc in usersSnapshot.docs) {
         final userId = userDoc.id;
-        // ✅ 디버그 출력: 각 userId에 대해 쿼리 시도
         print("Debug LoadSeats: Querying reservations for user: $userId");
 
         final userReservationsSnapshot = await _firestore
@@ -188,7 +181,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
             .doc(userId)
             .collection('reservations')
             .where('showId', isEqualTo: widget.showId)
-            .where('dateTime', isEqualTo: currentSelectedDateTimeString) // ✅ 통일된 문자열 사용
+            .where('dateTime', isEqualTo: currentSelectedDateTimeString)
             .where('section', isEqualTo: sectionName)
             .get();
 
@@ -242,7 +235,6 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       if (e is FirebaseException) {
         print("Debug LoadSeats: Firebase Exception Code: ${e.code}");
         print("Debug LoadSeats: Firebase Exception Message: ${e.message}");
-        // ✅ 디버그: 여기서 permission-denied가 발생하면 users 컬렉션에 대한 읽기 규칙을 다시 확인
       }
       if(mounted) {
         setState(() {
@@ -374,7 +366,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           ? MainCanvasLayout(
         showTitle: widget.showTitle,
         selectedDate: currentFullDateTime,
-        onDateChangePressed: () {
+        onDateChangePressed: () async { // await 추가
           showShowTimePicker(
             context: context,
             showId: widget.showId,
@@ -388,6 +380,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
                   _selectedGrade = null;
                   selectedSeats = [];
                   totalPrice = 0;
+                  seats = []; // ✅ 날짜 변경 시 좌석 그리드 데이터 즉시 초기화
                 });
               }
               _loadAllVenueSections();
@@ -400,6 +393,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
             setState(() {
               _selectedGrade = grade;
               _selectedSectionName = '';
+              seats = []; // 등급 변경 시 좌석 그리드 데이터 즉시 초기화
             });
           }
         },
@@ -419,6 +413,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
               _selectedSectionName = '';
               selectedSeats = [];
               totalPrice = 0;
+              seats = []; // 새로고침 시 좌석 그리드 데이터 즉시 초기화
             });
           }
           _loadAllVenueSections();
@@ -441,6 +436,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           if (mounted) {
             setState(() {
               _selectedSectionName = sectionName;
+              seats = []; // 구역 리스트 선택 시 좌석 그리드 데이터 즉시 초기화
             });
           }
         },
@@ -461,6 +457,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
               totalPrice = 0;
               _selectedGrade = null;
               _selectedSectionName = '';
+              seats = []; // 구역 변경 시 좌석 그리드 데이터 즉시 초기화
             });
           }
         },
