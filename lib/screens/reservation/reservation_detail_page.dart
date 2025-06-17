@@ -21,13 +21,20 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     _loadUserNickname();
   }
 
-  // ✅ 사용자 닉네임을 Firestore에서 불러오는 함수 (경로 일치)
+  // ✅ 사용자 닉네임을 Firestore에서 불러오는 함수 (경로 변경)
   Future<void> _loadUserNickname() async {
     final userId = widget.reservation['userId'];
     if (userId != null && userId.isNotEmpty) {
+      final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
+
       try {
-        // 사용자 정보 조회 경로: users/{userId} (AuthService에서 저장하는 경로와 일치)
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        // 사용자 정보 조회 경로 변경: artifacts/{appId}/users/{userId}
+        final userDoc = await FirebaseFirestore.instance
+            .collection('artifacts')
+            .doc(appId)
+            .collection('users')
+            .doc(userId)
+            .get();
 
         if (userDoc.exists) {
           setState(() {

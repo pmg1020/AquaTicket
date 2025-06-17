@@ -13,9 +13,14 @@ class AuthService {
 
     User? user = userCredential.user;
     if (user != null) {
-      // ✅ Firestore에 사용자 정보 저장 경로: users/{user.uid} (최상위 컬렉션)
+      // Canvas 환경의 appId를 가져옵니다.
+      final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
+
+      // ✅ Firestore에 사용자 정보 저장 경로 변경: artifacts/{appId}/users/{user.uid}
       await _firestore
-          .collection('users') // 'users' 컬렉션 (루트 레벨)
+          .collection('artifacts')
+          .doc(appId)
+          .collection('users') // users 서브컬렉션
           .doc(user.uid)
           .set({
         'email': user.email,

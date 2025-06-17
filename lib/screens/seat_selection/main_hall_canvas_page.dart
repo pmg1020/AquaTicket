@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // 날짜 포맷팅을 위해 intl 패키지 임포트
+import 'package:intl/intl.dart';
 import '../reservation/reservation_confirmation_page.dart';
 import 'widgets/main_canvas_layout.dart';
 import 'widgets/detail_canvas_layout.dart';
 import 'widgets/outer_seating_block.dart';
-import 'show_time_selector.dart'; // show_time_selector.dart 임포트
+import 'show_time_selector.dart';
 
 
 class MainHallCanvasPage extends StatefulWidget {
@@ -124,7 +124,10 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
-      print("Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute))}");
+      final selectedDateTimeObj = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
+      final queryDateTimeString = DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTimeObj); // ✅ 쿼리할 날짜/시간 문자열 형식 통일
+
+      print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: $queryDateTimeString");
 
       final sectionRef = _firestore
           .collection('venues')
@@ -136,7 +139,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       final sectionData = sectionSnap.data();
 
       if (sectionData == null || sectionData['rows'] == null || sectionData['columns'] == null) {
-        print("섹션 데이터 불완전하거나 없음: $sectionName. Data: $sectionData");
+        print("Debug LoadSeats: 섹션 데이터 불완전하거나 없음: $sectionName. Data: $sectionData");
         if(mounted) {
           setState(() {
             rows = 0;
@@ -158,17 +161,26 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         });
       }
 
-      final String currentSelectedDateTimeString =
-          "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
-      print("Querying reservations for showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
+      // 쿼리 파라미터와 정확히 일치하는 형식의 문자열 생성
+      final String currentSelectedDateTimeString = queryDateTimeString; // ✅ 통일된 문자열 사용
+      print("Debug LoadSeats: Querying reservations with -> showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
 
       Set<String> currentlyReservedSeatNumbers = {};
       final appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
 
+      // 모든 사용자의 예약 정보를 조회 (이 부분에서 permission-denied가 발생하지 않도록 규칙 수정 필요)
+      // `users` 컬렉션에 대한 `allow read: if request.auth != null;` 규칙이 필요
       final usersSnapshot = await _firestore.collection('artifacts').doc(appId).collection('users').get();
+
+      // ✅ 디버그 출력: usersSnapshot에 문서가 몇 개 있는지
+      print("Debug LoadSeats: usersSnapshot docs count: ${usersSnapshot.docs.length}");
+
 
       for (var userDoc in usersSnapshot.docs) {
         final userId = userDoc.id;
+        // ✅ 디버그 출력: 각 userId에 대해 쿼리 시도
+        print("Debug LoadSeats: Querying reservations for user: $userId");
+
         final userReservationsSnapshot = await _firestore
             .collection('artifacts')
             .doc(appId)
@@ -176,20 +188,20 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
             .doc(userId)
             .collection('reservations')
             .where('showId', isEqualTo: widget.showId)
-            .where('dateTime', isEqualTo: currentSelectedDateTimeString)
+            .where('dateTime', isEqualTo: currentSelectedDateTimeString) // ✅ 통일된 문자열 사용
             .where('section', isEqualTo: sectionName)
             .get();
 
         for (var resDoc in userReservationsSnapshot.docs) {
           final List<dynamic> bookedSeats = resDoc.data()['seats'] ?? [];
-          print("Found reservation doc ${resDoc.id}, seats: $bookedSeats"); // Debugging
+          print("Debug LoadSeats: Found reservation doc ${resDoc.id} for user $userId, seats: $bookedSeats");
           for (var seat in bookedSeats) {
             currentlyReservedSeatNumbers.add(seat as String);
           }
         }
       }
-      print("총 예약된 좌석 수 (이 회차, 이 섹션): ${currentlyReservedSeatNumbers.length}");
-      print("예약된 좌석 번호 목록: $currentlyReservedSeatNumbers"); // Debugging
+      print("Debug LoadSeats: 총 예약된 좌석 수 (이 회차, 이 섹션): ${currentlyReservedSeatNumbers.length}");
+      print("Debug LoadSeats: 예약된 좌석 번호 목록: $currentlyReservedSeatNumbers");
 
 
       List<List<Map<String, dynamic>>> tempSeats = [];
@@ -224,12 +236,13 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           seats = tempSeats;
         });
       }
-      print("좌석 그리드 데이터 생성 완료. Rows: $rows, Columns: $columns");
+      print("Debug LoadSeats: 좌석 그리드 데이터 생성 완료. Rows: $rows, Columns: $columns");
     } catch (e) {
-      print("좌석 불러오기 오류 ($sectionName): $e");
+      print("Debug LoadSeats: 좌석 불러오기 오류 ($sectionName): $e");
       if (e is FirebaseException) {
-        print("Firebase Exception Code: ${e.code}");
-        print("Firebase Exception Message: ${e.message}");
+        print("Debug LoadSeats: Firebase Exception Code: ${e.code}");
+        print("Debug LoadSeats: Firebase Exception Message: ${e.message}");
+        // ✅ 디버그: 여기서 permission-denied가 발생하면 users 컬렉션에 대한 읽기 규칙을 다시 확인
       }
       if(mounted) {
         setState(() {
@@ -362,7 +375,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         showTitle: widget.showTitle,
         selectedDate: currentFullDateTime,
         onDateChangePressed: () {
-          showShowTimePicker( // ✅ await 제거
+          showShowTimePicker(
             context: context,
             showId: widget.showId,
             onTimeSelected: (selectedTimeStr) {
