@@ -23,7 +23,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final isAdmin = user?.email == 'admin@example.com'; // 관리자 판별
+    final isAdmin = user?.email == 'admin@example.com';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -43,77 +43,34 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 60),
-            const Text(
-              '환영합니다!',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ShowListPage()),
-                );
-              },
-              icon: const Icon(Icons.theaters),
-              label: const Text('공연 목록 보기'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 60),
+              const Text(
+                '환영합니다!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ReservationListPage()),
-                );
-              },
-              icon: const Icon(Icons.receipt_long),
-              label: const Text('예매 목록 보기'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-
-            const Spacer(),
-
-            // 관리자 전용 버튼
-            if (isAdmin) ...[
+              const SizedBox(height: 40),
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminVenueSetupPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const ShowListPage()),
                   );
                 },
-                icon: const Icon(Icons.settings),
-                label: const Text('공연장 초기화'),
+                icon: const Icon(Icons.theaters),
+                label: const Text('공연 목록 보기'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -122,20 +79,17 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainHallSeatInitializerPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => ReservationListPage()),
                   );
                 },
-                icon: const Icon(Icons.event_seat),
-                label: const Text('메인홀 좌석 초기화'),
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('예매 목록 보기'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -143,67 +97,113 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
 
-              // ✅ 캔버스 좌석도 보기 버튼 (테스트용 더미 데이터 전달 - 실제 예매된 값으로 변경)
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MainHallCanvasPage(
-                        showId: 'HOzESJZICTCIeLvITbGO', // ✅ 실제 예매된 showId
-                        showTitle: '테스트', // ✅ 실제 예매된 showTitle
-                        selectedDateTime: '2025-06-11 20:00', // ✅ 실제 예매된 dateTime
-                        venueId: 'main_hall', // ✅ Firebase에 초기화된 venueId
-                        maxTicketsPerUser: 4,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.map),
-                label: const Text('메인홀 좌석 배치도 보기'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminShowCreatePage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add_business),
-                label: const Text('공연 등록'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
               const SizedBox(height: 24),
-            ],
 
-            const Text(
-              '즐거운 관람 되세요 🎉',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
-          ],
+              if (isAdmin) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminVenueSetupPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('공연장 초기화'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MainHallSeatInitializerPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.event_seat),
+                  label: const Text('메인홀 좌석 초기화'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MainHallCanvasPage(
+                          showId: 'YGQzJWNukdy5kCBmy9Gt',
+                          showTitle: '테네테스트',
+                          selectedDateTime: '2025-09-30 18:00',
+                          venueId: 'main_hall',
+                          maxTicketsPerUser: 4,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.map),
+                  label: const Text('메인홀 좌석 배치도 보기'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminShowCreatePage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add_business),
+                  label: const Text('공연 등록'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              const Text(
+                '즐거운 관람 되세요 🎉',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

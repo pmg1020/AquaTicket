@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // ✅ 불필요한 임포트 제거
 
 class ReservationDetailPage extends StatefulWidget {
   final Map<String, dynamic> reservation;
@@ -21,14 +21,12 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     _loadUserNickname();
   }
 
-  // ✅ 사용자 닉네임을 Firestore에서 불러오는 함수 (경로 변경)
   Future<void> _loadUserNickname() async {
     final userId = widget.reservation['userId'];
     if (userId != null && userId.isNotEmpty) {
       final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
 
       try {
-        // 사용자 정보 조회 경로 변경: artifacts/{appId}/users/{userId}
         final userDoc = await FirebaseFirestore.instance
             .collection('artifacts')
             .doc(appId)
@@ -168,7 +166,7 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     String displayDateTime = '정보 없음';
     if (dateTimeString.isNotEmpty) {
       try {
-        final parsedDateTime = DateTime.parse(dateTimeString.replaceAll(' ', 'T'));
+        final parsedDateTime = DateTime.parse(dateTimeString.replaceFirst(' ', 'T'));
         final formattedDate = DateFormat('yyyy년 MM월 dd일').format(parsedDateTime);
         final formattedTime = DateFormat('HH시mm분').format(parsedDateTime);
         final dayOfWeek = _getDayOfWeek(parsedDateTime.weekday);

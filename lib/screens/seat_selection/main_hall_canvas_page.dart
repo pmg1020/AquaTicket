@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import '../reservation/reservation_confirmation_page.dart';
 import 'widgets/main_canvas_layout.dart';
 import 'widgets/detail_canvas_layout.dart';
-import 'widgets/outer_seating_block.dart';
 import 'show_time_selector.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 class MainHallCanvasPage extends StatefulWidget {
@@ -44,6 +44,8 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
   List<String> selectedSeats = [];
   int totalPrice = 0;
 
+  int _currentUserReservedCountForThisShowDateTime = 0;
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
@@ -81,7 +83,60 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
     }
   }
 
-  // 맵의 구역 클릭 시 호출되는 팝업 함수
+  Future<void> _countCurrentUserReservedSeatsForCurrentShowDateTime() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("Debug: 현재 사용자가 로그인되어 있지 않습니다. 예약 수 0으로 설정.");
+      if (mounted) {
+        setState(() {
+          _currentUserReservedCountForThisShowDateTime = 0;
+        });
+      }
+      return;
+    }
+
+    final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
+    final String userId = user.uid;
+    final String currentSelectedDateTimeString =
+        "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
+
+    try {
+      final userReservationsSnapshot = await _firestore
+          .collection('artifacts')
+          .doc(appId)
+          .collection('users')
+          .doc(userId)
+          .collection('reservations')
+          .where('showId', isEqualTo: widget.showId)
+          .where('dateTime', isEqualTo: currentSelectedDateTimeString)
+          .get();
+
+      int count = 0;
+      for (var doc in userReservationsSnapshot.docs) {
+        final List<dynamic> bookedSeats = doc.data()['seats'] ?? [];
+        count += bookedSeats.length;
+      }
+      if (mounted) {
+        setState(() {
+          _currentUserReservedCountForThisShowDateTime = count;
+        });
+      }
+      print("Debug: Current user has already reserved $count seats for this show and time.");
+    } catch (e) {
+      print("Debug: Failed to count current user's reserved seats: $e");
+      if (e is FirebaseException) {
+        print("Firebase Exception Code (count reserved seats): ${e.code}");
+        print("Firebase Exception Message (count reserved seats): ${e.message}");
+      }
+      if (mounted) {
+        setState(() {
+          _currentUserReservedCountForThisShowDateTime = 0;
+        });
+      }
+    }
+  }
+
+
   void _showZoneSelectionDialog(BuildContext context, String sectionName) {
     showDialog(
       context: context,
@@ -109,10 +164,11 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
                 if(mounted) {
                   setState(() {
                     _selectedSectionName = sectionName;
-                    _currentView = 'detail'; // 바로 상세 좌석 그리드 화면으로 전환
+                    _currentView = 'detail';
                   });
                 }
-                _loadSeatsForSection(sectionName); // 상세 좌석 데이터 로드
+                _loadSeatsForSection(sectionName);
+                _countCurrentUserReservedSeatsForCurrentShowDateTime();
               },
               child: const Text("이동"),
             ),
@@ -124,7 +180,10 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
-      print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute))}");
+      final selectedDateTimeObj = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
+      final queryDateTimeString = DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTimeObj); // 쿼리할 날짜/시간 문자열 형식 통일
+
+      print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: $queryDateTimeString");
 
       final sectionRef = _firestore
           .collection('venues')
@@ -158,8 +217,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         });
       }
 
-      final String currentSelectedDateTimeString =
-          "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
+      final String currentSelectedDateTimeString = queryDateTimeString;
       print("Debug LoadSeats: Querying reservations with -> showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
 
       Set<String> currentlyReservedSeatNumbers = {};
@@ -233,8 +291,8 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
     } catch (e) {
       print("Debug LoadSeats: 좌석 불러오기 오류 ($sectionName): $e");
       if (e is FirebaseException) {
-        print("Debug LoadSeats: Firebase Exception Code: ${e.code}");
-        print("Debug LoadSeats: Firebase Exception Message: ${e.message}");
+        print("Firebase Exception Code: ${e.code}");
+        print("Firebase Exception Message: ${e.message}");
       }
       if(mounted) {
         setState(() {
@@ -262,12 +320,12 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
           selectedSeats.remove(seatNumber);
           totalPrice -= seatPrice;
         } else {
-          if (selectedSeats.length < widget.maxTicketsPerUser) {
+          if ((selectedSeats.length + _currentUserReservedCountForThisShowDateTime) < widget.maxTicketsPerUser) {
             selectedSeats.add(seatNumber);
             totalPrice += seatPrice;
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("최대 ${widget.maxTicketsPerUser}자리까지만 선택 가능합니다.")),
+              SnackBar(content: Text("해당 공연/회차에 최대 ${widget.maxTicketsPerUser}자리까지만 예매할 수 있습니다. (이미 예매된 좌석 포함)")),
             );
           }
         }
@@ -330,7 +388,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext buildContext) {
     final DateTime currentFullDateTime = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -339,8 +397,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       _selectedTime.minute,
     );
     final String currentSelectedDateTimeString =
-        "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
-
+        "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(currentFullDateTime)}";
 
     return Scaffold(
       appBar: AppBar(
@@ -362,131 +419,137 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         )
             : null,
       ),
-      body: _currentView == 'main'
-          ? MainCanvasLayout(
-        showTitle: widget.showTitle,
-        selectedDate: currentFullDateTime,
-        onDateChangePressed: () async { // await 추가
-          showShowTimePicker(
-            context: context,
-            showId: widget.showId,
-            onTimeSelected: (selectedTimeStr) {
-              final parsedDateTime = DateTime.parse(selectedTimeStr.replaceFirst(' ', 'T'));
-              if(mounted) {
-                setState(() {
-                  _selectedDate = DateTime(parsedDateTime.year, parsedDateTime.month, parsedDateTime.day);
-                  _selectedTime = TimeOfDay(hour: parsedDateTime.hour, minute: parsedDateTime.minute);
-                  _selectedSectionName = '';
-                  _selectedGrade = null;
-                  selectedSeats = [];
-                  totalPrice = 0;
-                  seats = []; // ✅ 날짜 변경 시 좌석 그리드 데이터 즉시 초기화
-                });
-              }
-              _loadAllVenueSections();
-            },
-          );
-        },
-        selectedGrade: _selectedGrade,
-        onGradeSelected: (grade) {
-          if (mounted) {
-            setState(() {
-              _selectedGrade = grade;
-              _selectedSectionName = '';
-              seats = []; // 등급 변경 시 좌석 그리드 데이터 즉시 초기화
-            });
-          }
-        },
-        allSections: _allSections,
-        onZoneBlockTap: (ctx, name) => _showZoneSelectionDialog(ctx, name),
-        getDayOfWeek: _getDayOfWeek,
-        getSectionsForGrade: _getSectionsForGrade,
-        currentView: _currentView,
-        selectedSectionName: _selectedSectionName,
-        selectedSeats: selectedSeats,
-        totalPrice: totalPrice,
-        maxTicketsPerUser: widget.maxTicketsPerUser,
-        onRefreshPressed: () {
-          if (mounted) {
-            setState(() {
-              _selectedGrade = null;
-              _selectedSectionName = '';
-              selectedSeats = [];
-              totalPrice = 0;
-              seats = []; // 새로고침 시 좌석 그리드 데이터 즉시 초기화
-            });
-          }
-          _loadAllVenueSections();
-        },
-        onSelectSeatsPressed: () {
-          if (_selectedSectionName.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("먼저 구역을 선택해주세요.")),
+      body: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(buildContext).padding.bottom),
+        child: _currentView == 'main'
+            ? MainCanvasLayout(
+          showTitle: widget.showTitle,
+          selectedDate: currentFullDateTime,
+          onDateChangePressed: () async {
+            showShowTimePicker(
+              context: buildContext,
+              showId: widget.showId,
+              onTimeSelected: (selectedTimeStr) {
+                final parsedDateTime = DateTime.parse(selectedTimeStr.replaceFirst(' ', 'T'));
+                if(mounted) {
+                  setState(() {
+                    _selectedDate = DateTime(parsedDateTime.year, parsedDateTime.month, parsedDateTime.day);
+                    _selectedTime = TimeOfDay(hour: parsedDateTime.hour, minute: parsedDateTime.minute);
+                    _selectedSectionName = '';
+                    _selectedGrade = null;
+                    selectedSeats = [];
+                    totalPrice = 0;
+                    seats = [];
+                  });
+                }
+                _loadAllVenueSections();
+              },
             );
-          } else {
+          },
+          selectedGrade: _selectedGrade,
+          onGradeSelected: (grade) {
             if (mounted) {
               setState(() {
-                _currentView = 'detail';
+                _selectedGrade = grade;
+                _selectedSectionName = '';
+                seats = [];
               });
             }
+          },
+          allSections: _allSections,
+          onZoneBlockTap: (ctx, name) => _showZoneSelectionDialog(ctx, name),
+          getDayOfWeek: _getDayOfWeek,
+          getSectionsForGrade: _getSectionsForGrade,
+          currentView: _currentView,
+          selectedSectionName: _selectedSectionName,
+          selectedSeats: selectedSeats,
+          totalPrice: totalPrice,
+          maxTicketsPerUser: widget.maxTicketsPerUser,
+          onRefreshPressed: () {
+            if (mounted) {
+              setState(() {
+                _selectedGrade = null;
+                _selectedSectionName = '';
+                selectedSeats = [];
+                totalPrice = 0;
+                seats = [];
+              });
+            }
+            _loadAllVenueSections();
+          },
+          onSelectSeatsPressed: () {
+            if (_selectedSectionName.isEmpty) {
+              ScaffoldMessenger.of(buildContext).showSnackBar(
+                const SnackBar(content: Text("먼저 구역을 선택해주세요.")),
+              );
+            } else {
+              if (mounted) {
+                setState(() {
+                  _currentView = 'detail';
+                });
+              }
+              _countCurrentUserReservedSeatsForCurrentShowDateTime().then((_) {
+                _loadSeatsForSection(_selectedSectionName);
+              });
+            }
+          },
+          onSectionSelectedFromList: (sectionName) {
+            if (mounted) {
+              setState(() {
+                _selectedSectionName = sectionName;
+                seats = [];
+              });
+            }
+          },
+        )
+            : DetailCanvasLayout(
+          showTitle: widget.showTitle,
+          selectedDate: _selectedDate,
+          displayDateTimeString: currentSelectedDateTimeString,
+          selectedSectionName: _selectedSectionName,
+          seats: seats,
+          selectedSeats: selectedSeats,
+          totalPrice: totalPrice,
+          onSeatToggled: _toggleSeat,
+          onSectionChangePressed: () {
+            if (mounted) {
+              setState(() {
+                _currentView = 'main';
+                selectedSeats = [];
+                totalPrice = 0;
+                _selectedGrade = null;
+                _selectedSectionName = '';
+                seats = [];
+              });
+            }
+          },
+          onRefreshSeatsPressed: () {
             _loadSeatsForSection(_selectedSectionName);
+          },
+          onConfirmSelectionPressed: selectedSeats.isEmpty
+              ? () {
+            ScaffoldMessenger.of(buildContext).showSnackBar(
+              const SnackBar(content: Text("좌석을 선택해주세요.")),
+            );
           }
-        },
-        onSectionSelectedFromList: (sectionName) {
-          if (mounted) {
-            setState(() {
-              _selectedSectionName = sectionName;
-              seats = []; // 구역 리스트 선택 시 좌석 그리드 데이터 즉시 초기화
-            });
-          }
-        },
-      )
-          : DetailCanvasLayout(
-        showTitle: widget.showTitle,
-        selectedDate: _selectedDate,
-        selectedSectionName: _selectedSectionName,
-        seats: seats,
-        selectedSeats: selectedSeats,
-        totalPrice: totalPrice,
-        onSeatToggled: _toggleSeat,
-        onSectionChangePressed: () {
-          if (mounted) {
-            setState(() {
-              _currentView = 'main';
-              selectedSeats = [];
-              totalPrice = 0;
-              _selectedGrade = null;
-              _selectedSectionName = '';
-              seats = []; // 구역 변경 시 좌석 그리드 데이터 즉시 초기화
-            });
-          }
-        },
-        onRefreshSeatsPressed: () {
-          _loadSeatsForSection(_selectedSectionName);
-        },
-        onConfirmSelectionPressed: selectedSeats.isEmpty
-            ? () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("좌석을 선택해주세요.")),
-          );
-        }
-            : () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReservationConfirmationPage(
-                showId: widget.showId,
-                showTitle: widget.showTitle,
-                selectedDateTime: currentSelectedDateTimeString,
-                sectionName: _selectedSectionName,
-                selectedSeats: selectedSeats,
-                totalPrice: totalPrice,
+              : () {
+            Navigator.push(
+              buildContext,
+              MaterialPageRoute(
+                builder: (context) => ReservationConfirmationPage(
+                  showId: widget.showId,
+                  showTitle: widget.showTitle,
+                  selectedDateTime: currentSelectedDateTimeString,
+                  sectionName: _selectedSectionName,
+                  selectedSeats: selectedSeats,
+                  totalPrice: totalPrice,
+                ),
               ),
-            ),
-          );
-        },
-        getSeatColor: _getSeatColor,
-        getDayOfWeek: _getDayOfWeek,
+            );
+          },
+          getSeatColor: _getSeatColor,
+          getDayOfWeek: _getDayOfWeek,
+        ),
       ),
     );
   }

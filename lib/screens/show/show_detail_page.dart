@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // 날짜 포맷팅을 위해 intl 패키지 필요
+import 'package:intl/intl.dart';
 import '../../models/show.dart';
 import '../seat_selection/show_time_selector.dart';
 import '../seat_selection/captcha_dialog.dart';
-import '../seat_selection/main_hall_canvas_page.dart'; // MainHallCanvasPage 임포트
+import '../seat_selection/main_hall_canvas_page.dart';
 
 class ShowDetailPage extends StatelessWidget {
   final Show show;
 
   const ShowDetailPage({super.key, required this.show});
 
-  // 요일 변환 헬퍼 함수
   String _getDayOfWeek(int weekday) {
     switch (weekday) {
       case DateTime.monday:
@@ -91,7 +90,6 @@ class ShowDetailPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // 예매 가능 최대 수 추가
             Row(
               children: [
                 const Icon(Icons.confirmation_num, size: 20, color: Colors.grey),
@@ -114,15 +112,14 @@ class ShowDetailPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                // 날짜 포맷팅 수정
                 ...show.date.map((dateString) {
                   try {
-                    final dateTime = DateTime.parse(dateString);
+                    final dateTime = DateTime.parse(dateString.replaceFirst(' ', 'T'));
                     final formattedDate = DateFormat('yyyy년 MM월 dd일').format(dateTime);
                     final formattedTime = DateFormat('HH시mm분').format(dateTime);
                     final dayOfWeek = _getDayOfWeek(dateTime.weekday);
                     return Padding(
-                      padding: const EdgeInsets.only(left: 28.0), // 아이콘과 같은 들여쓰기
+                      padding: const EdgeInsets.only(left: 28.0),
                       child: Text(
                         '$formattedDate ($dayOfWeek) $formattedTime',
                         style: const TextStyle(fontSize: 16),
@@ -132,7 +129,7 @@ class ShowDetailPage extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.only(left: 28.0),
                       child: Text(
-                        dateString, // 파싱 실패 시 원본 문자열 표시
+                        dateString,
                         style: const TextStyle(fontSize: 16, color: Colors.red),
                       ),
                     );
@@ -160,7 +157,7 @@ class ShowDetailPage extends StatelessWidget {
                                 showTitle: show.title,
                                 selectedDateTime: selectedTime,
                                 venueId: show.venueId,
-                                maxTicketsPerUser: show.maxTicketsPerUser, // show 데이터에서 가져온 값 전달
+                                maxTicketsPerUser: show.maxTicketsPerUser,
                               ),
                             ),
                           );
