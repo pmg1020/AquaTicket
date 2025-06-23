@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class DetailCanvasLayout extends StatelessWidget {
   final String showTitle;
-  final DateTime selectedDate;
+  final DateTime selectedDate; // DateTime 객체로 유지
+  final String displayDateTimeString; // 포맷팅된 날짜-시간 문자열
   final String selectedSectionName;
   final List<List<Map<String, dynamic>>> seats;
   final List<String> selectedSeats;
   final int totalPrice;
   final void Function(int row, int col) onSeatToggled;
-  final VoidCallback onSectionChangePressed; // 구역 변경 버튼 콜백
-  final VoidCallback onRefreshSeatsPressed; // 새로고침 버튼 콜백
-  final void Function() onConfirmSelectionPressed; // 다음 (좌석 선택) 버튼 콜백
-  final Color Function(String grade) getSeatColor; // 좌석 색상 헬퍼 함수
-  final String Function(int weekday) getDayOfWeek; // 요일 헬퍼 함수
+  final VoidCallback onSectionChangePressed;
+  final VoidCallback onRefreshSeatsPressed;
+  final void Function() onConfirmSelectionPressed;
+  final Color Function(String grade) getSeatColor;
+  final String Function(int weekday) getDayOfWeek;
 
   const DetailCanvasLayout({
-    Key? key,
+    super.key,
     required this.showTitle,
     required this.selectedDate,
+    required this.displayDateTimeString, // 생성자에서 받도록 유지
     required this.selectedSectionName,
     required this.seats,
     required this.selectedSeats,
@@ -28,31 +31,30 @@ class DetailCanvasLayout extends StatelessWidget {
     required this.onConfirmSelectionPressed,
     required this.getSeatColor,
     required this.getDayOfWeek,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
+    // 이제 이 부분에서 직접 selectedDate를 포맷팅하지 않고,
+    // 이미 포맷팅되어 전달받은 displayDateTimeString을 사용합니다.
     return Column(
       children: [
-        // 콘서트 이름 (상세 화면에도 표시)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Text(
             showTitle,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
-        // 선택된 날짜와 구역 정보
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "${selectedDate.year}년 ${selectedDate.month}월 ${selectedDate.day}일 (${getDayOfWeek(selectedDate.weekday)}) ${selectedDate.hour}시${selectedDate.minute.toString().padLeft(2, '0')}분",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                displayDateTimeString, // ✅ 전달받은 displayDateTimeString 사용
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
-              // 날짜 변경 버튼 대신 구역 변경 버튼
               ElevatedButton(
                 onPressed: onSectionChangePressed,
                 style: ElevatedButton.styleFrom(
@@ -66,14 +68,13 @@ class DetailCanvasLayout extends StatelessWidget {
             ],
           ),
         ),
-        // 상세 구역 이름
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 5.0),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              selectedSectionName, // 선택된 구역 이름 표시
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              selectedSectionName,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -82,7 +83,7 @@ class DetailCanvasLayout extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "무대방향", // "무대방향" 텍스트 추가
+              "무대방향",
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
@@ -112,18 +113,18 @@ class DetailCanvasLayout extends StatelessWidget {
                     return GestureDetector(
                       onTap: () => onSeatToggled(rowIndex, colIndex),
                       child: Container(
-                        width: 15, // 좌석 크기 더 줄임
-                        height: 15, // 좌석 크기 더 줄임
-                        margin: const EdgeInsets.all(1), // 좌석 간 간격 더 줄임
+                        width: 15,
+                        height: 15,
+                        margin: const EdgeInsets.all(1),
                         decoration: BoxDecoration(
                           color: isReserved
-                              ? Colors.grey[500] // 매진된 좌석을 회색으로 통일
-                              : getSeatColor(grade), // 등급에 따른 좌석 색상 (선택되어도 색상 유지)
+                              ? Colors.grey[500]
+                              : getSeatColor(grade),
                           border: Border.all(
                             color: isSelected ? Colors.black : Colors.transparent,
-                            width: isSelected ? 3.0 : 0, // 선택된 좌석 테두리 굵기 3.0
+                            width: isSelected ? 3.0 : 0,
                           ),
-                          borderRadius: BorderRadius.circular(2), // 둥근 모서리 더 줄임
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     );
