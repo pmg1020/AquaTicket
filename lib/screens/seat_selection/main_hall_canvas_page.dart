@@ -6,6 +6,7 @@ import 'widgets/main_canvas_layout.dart';
 import 'widgets/detail_canvas_layout.dart';
 import 'show_time_selector.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:aquaticket/models/show.dart'; // Show 모델 임포트
 
 
 class MainHallCanvasPage extends StatefulWidget {
@@ -46,10 +47,11 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
 
   int _currentUserReservedCountForThisShowDateTime = 0; // ✅ 상태 변수
 
-  // ✅ _currentSelectedDateTimeStringFormatted를 클래스 멤버 변수로 선언
-  late String _currentSelectedDateTimeStringFormatted;
-  // ✅ _currentSelectedDateTimeStringParseable 클래스 멤버 변수 선언
-  late String _currentSelectedDateTimeStringParseable;
+  late String _currentSelectedDateTimeStringFormatted; // 사람이 읽기 쉬운 포맷
+  late String _currentSelectedDateTimeStringParseable; // 기계가 파싱하기 쉬운 포맷 (YYYY-MM-DD HH:MM)
+
+  // ✅ _currentShowBasePrice를 저장할 변수
+  int _currentShowBasePrice = 70000;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -70,6 +72,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
     }
     _loadAllVenueSections(); // ✅ initState에서 호출 (정의는 아래에)
     _updateDateTimeStrings(); // ✅ initState에서 호출 (정의는 아래에)
+    _loadShowBasePrice(); // ✅ initState에서 호출
   }
 
   @override
@@ -102,6 +105,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
         _loadSeatsForSection(_selectedSectionName);
       }
       _countCurrentUserReservedCountForThisShowDateTime(); // ✅ 이곳에서도 호출
+      _loadShowBasePrice(); // 재활성화 시 기본 가격도 다시 로드
     }
   }
 
@@ -141,9 +145,29 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
     }
   }
 
+  // ✅ _loadShowBasePrice 함수 정의 (여기에 있어야 합니다!)
+  Future<void> _loadShowBasePrice() async {
+    try {
+      final showDoc = await _firestore.collection('shows').doc(widget.showId).get();
+      if (showDoc.exists) {
+        final showData = Show.fromMap(showDoc.id, showDoc.data()!);
+        if (mounted) {
+          setState(() {
+            _currentShowBasePrice = showData.basePrice;
+          });
+        }
+        print("Debug: Show Base Price loaded: $_currentShowBasePrice");
+      } else {
+        print("Debug: Show document not found for ID: ${widget.showId}");
+      }
+    } catch (e) {
+      print("Debug: Error loading show base price: $e");
+    }
+  }
+
   // ✅ _countCurrentUserReservedCountForThisShowDateTime 메서드 정의 시작 (여기에 있어야 합니다!)
   Future<void> _countCurrentUserReservedCountForThisShowDateTime() async {
-    final user = FirebaseAuth.instance.currentUser; // FirebaseAuth 클래스 참조
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       print("Debug: 현재 사용자가 로그인되어 있지 않습니다. 예약 수 0으로 설정.");
       if (mounted) {
@@ -156,7 +180,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
 
     final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
     final String userId = user.uid;
-    final String currentSelectedDateTimeString = _currentSelectedDateTimeStringParseable; // ✅ 파싱 가능한 문자열 사용
+    final String currentSelectedDateTimeString = _currentSelectedDateTimeStringParseable;
 
     try {
       final userReservationsSnapshot = await _firestore
@@ -240,7 +264,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
       final selectedDateTimeObj = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
-      final queryDateTimeString = _currentSelectedDateTimeStringParseable; // ✅ 파싱 가능한 문자열 사용
+      final queryDateTimeString = _currentSelectedDateTimeStringParseable;
 
       print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: $queryDateTimeString");
 
@@ -276,7 +300,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
         });
       }
 
-      final String currentSelectedDateTimeString = queryDateTimeString; // ✅ 파싱 가능한 문자열 사용
+      final String currentSelectedDateTimeString = queryDateTimeString;
       print("Debug LoadSeats: Querying reservations with -> showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
 
       Set<String> currentlyReservedSeatNumbers = {};
@@ -329,7 +353,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
           final bool isReservedForThisShow = currentlyReservedSeatNumbers.contains(seatNumber);
 
           String seatGrade = allSeatsMap[seatNumber]?['grade'] ?? 'NORMAL';
-          int seatPrice = _getSeatPrice(seatGrade);
+          int seatPrice = (_currentShowBasePrice * _getGradeMultiplier(seatGrade)).round();
 
           rowSeats.add({
             'seatNumber': seatNumber,
@@ -392,6 +416,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
     }
   }
 
+  // ✅ _getSeatColor 헬퍼 함수 정의
   Color _getSeatColor(String grade) {
     switch (grade.toUpperCase()) {
       case 'VIP': return Colors.red;
@@ -400,26 +425,28 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBin
       case 'S': return Colors.blue;
       case 'A': return Colors.purple;
       case 'VIP_TABLE': return Colors.deepOrange;
-      case 'ZONE': return Colors.purple[300]!;
+      case 'ZONE': return Colors.purple[300]!; // ✅ 스탠딩석 색상을 보라색으로 다시 변경
       case 'NORMAL_2F': return const Color(0xFFD4C8A6);
       default: return const Color(0xFFD4C8A6);
     }
   }
 
-  int _getSeatPrice(String grade) {
+  // ✅ _getGradeMultiplier 헬퍼 함수 정의
+  double _getGradeMultiplier(String grade) {
     switch (grade.toUpperCase()) {
-      case 'VIP': return 150000;
-      case 'SR': return 120000;
-      case 'R1': case 'R2': return 100000;
-      case 'S': return 80000;
-      case 'A': return 60000;
-      case 'VIP_TABLE': return 180000;
-      case 'ZONE': return 110000;
-      case 'NORMAL_2F': return 70000;
-      default: return 70000;
+      case 'VIP': return 1.5;
+      case 'SR': return 1.2;
+      case 'R1': case 'R2': return 1.0;
+      case 'S': return 0.8;
+      case 'A': return 0.6;
+      case 'VIP_TABLE': return 1.8;
+      case 'ZONE': return 1.0;
+      case 'NORMAL_2F': return 0.7;
+      default: return 1.0;
     }
   }
 
+  // ✅ _getDayOfWeek 헬퍼 함수 정의
   String _getDayOfWeek(int weekday) {
     switch (weekday) {
       case DateTime.monday: return '월';

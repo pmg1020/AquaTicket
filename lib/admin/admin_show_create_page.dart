@@ -17,6 +17,7 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
   final _locationController = TextEditingController();
   final _dateController = TextEditingController();
   final _maxTicketsController = TextEditingController();
+  final _basePriceController = TextEditingController();
 
   String? selectedVenueId;
   List<String> venueOptions = [];
@@ -28,6 +29,7 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
   void initState() {
     super.initState();
     _loadVenues();
+    _basePriceController.text = '70000';
   }
 
   @override
@@ -37,6 +39,7 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
     _locationController.dispose();
     _dateController.dispose();
     _maxTicketsController.dispose();
+    _basePriceController.dispose();
     super.dispose();
   }
 
@@ -82,6 +85,7 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
     final location = _locationController.text;
     final rawDates = _dateController.text.split(',').map((e) => e.trim()).toList();
     final maxTicketsPerUser = int.tryParse(_maxTicketsController.text) ?? 1;
+    final basePrice = int.tryParse(_basePriceController.text) ?? 70000;
 
     final List<String> formattedDates = [];
     for (String dateStr in rawDates) {
@@ -119,20 +123,17 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
       final venueDoc = await venueRef.get();
       final venueData = venueDoc.data();
 
-      // ✅ seatSections 데이터 구조를 Firestore에 저장 가능한 형태로 명시적으로 재구성
       List<Map<String, dynamic>> simplifiedSeatSections = [];
       if (venueData != null && venueData['sections'] is List) {
         for (var sectionItem in venueData['sections']) {
           if (sectionItem is Map<dynamic, dynamic>) {
-            // Firestore에 저장할 수 있는 기본 타입만 명시적으로 추출
-            simplifiedSeatSections.add({
-              'name': sectionItem['name'] as String? ?? '',
-              'grade': sectionItem['grade'] as String? ?? '',
-              'rows': sectionItem['rows'] as int? ?? 0,
-              'columns': sectionItem['columns'] as int? ?? 0,
-              // 'type', 'color', 'position' 등은 제거하거나 필요시 String으로 변환하여 저장
-              // 여기서는 불필요하거나 문제의 원인이 될 수 있는 필드를 제거합니다.
-            });
+            Map<String, dynamic> simplifiedSection = {};
+            if (sectionItem['name'] is String) simplifiedSection['name'] = sectionItem['name'];
+            if (sectionItem['grade'] is String) simplifiedSection['grade'] = sectionItem['grade'];
+            if (sectionItem['rows'] is int) simplifiedSection['rows'] = sectionItem['rows'];
+            if (sectionItem['columns'] is int) simplifiedSection['columns'] = sectionItem['columns'];
+
+            simplifiedSeatSections.add(simplifiedSection);
           }
         }
       }
@@ -143,10 +144,11 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
         'type': type,
         'location': location,
         'date': formattedDates,
-        'seatSections': simplifiedSeatSections, // ✅ 평탄화된 seatSections 사용
+        'seatSections': simplifiedSeatSections,
         'venueId': selectedVenueId,
         'maxTicketsPerUser': maxTicketsPerUser,
         'posterImageUrl': _posterImageUrl,
+        'basePrice': basePrice,
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -184,24 +186,34 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: "공연 제목"),
               ),
+              const SizedBox(height: 16), // ✅ 간격 추가
               TextField(
                 controller: _typeController,
                 decoration: const InputDecoration(labelText: "공연 유형"),
               ),
+              const SizedBox(height: 16), // ✅ 간격 추가
               TextField(
                 controller: _locationController,
                 decoration: const InputDecoration(labelText: "공연 장소"),
               ),
+              const SizedBox(height: 16), // ✅ 간격 추가
               TextField(
                 controller: _dateController,
                 decoration: const InputDecoration(labelText: "공연 날짜 (쉼표로 구분, YYYY-MM-DD HH:MM 형식)"),
               ),
+              const SizedBox(height: 16), // ✅ 간격 추가
               TextField(
                 controller: _maxTicketsController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "예매 가능 최대 수"),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 16), // ✅ 간격 추가
+              TextField(
+                controller: _basePriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "기본 좌석 가격 (예: 70000)"),
+              ),
+              const SizedBox(height: 16), // ✅ 간격 추가
               DropdownButton<String>(
                 isExpanded: true,
                 value: selectedVenueId,
@@ -219,7 +231,6 @@ class _AdminShowCreatePageState extends State<AdminShowCreatePage> {
                 },
               ),
               const SizedBox(height: 24),
-              // 포스터 이미지 업로드 버튼 및 미리보기
               _posterImageUrl == null
                   ? ElevatedButton.icon(
                 onPressed: _pickAndUploadPoster,

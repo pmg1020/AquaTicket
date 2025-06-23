@@ -31,6 +31,12 @@ class ShowDetailPage extends StatelessWidget {
     }
   }
 
+  // 통화 포맷터 헬퍼 함수
+  String _formatCurrency(int amount) {
+    final formatter = NumberFormat('#,###', 'ko_KR');
+    return formatter.format(amount);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,30 +50,30 @@ class ShowDetailPage extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: SingleChildScrollView( // ✅ SingleChildScrollView 추가
+      body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(24.0, 24.0, 24.0, MediaQuery.of(context).padding.bottom + 24.0), // ✅ 하단 패딩 조정
+          padding: EdgeInsets.fromLTRB(24.0, 24.0, 24.0, MediaQuery.of(context).padding.bottom + 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
-                  width: 180, // 이미지 너비
-                  height: 240, // 이미지 높이
+                  width: 180,
+                  height: 240,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey[200], // 이미지 로딩 전/실패 시 배경색
+                    color: Colors.grey[200],
                   ),
-                  clipBehavior: Clip.antiAlias, // 이미지 경계 처리
+                  clipBehavior: Clip.antiAlias,
                   child: show.posterImageUrl != null && show.posterImageUrl!.isNotEmpty
                       ? Image.network(
                     show.posterImageUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.broken_image, size: 80, color: Colors.grey[400]); // 로드 실패 시 아이콘
+                      return Icon(Icons.broken_image, size: 80, color: Colors.grey[400]);
                     },
                   )
-                      : Icon(Icons.calendar_today, size: 80, color: Colors.grey[400]), // 이미지 없을 때 기본 아이콘 (달력 아이콘 유지)
+                      : Icon(Icons.calendar_today, size: 80, color: Colors.grey[400]),
                 ),
               ),
               const SizedBox(height: 32),
@@ -119,6 +125,18 @@ class ShowDetailPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
+              // ✅ 기본 가격 표시 추가
+              Row(
+                children: [
+                  const Icon(Icons.monetization_on, size: 20, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    '기본 좌석 가격: ${_formatCurrency(show.basePrice)}원',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -155,7 +173,7 @@ class ShowDetailPage extends StatelessWidget {
                   }).toList(),
                 ],
               ),
-              const SizedBox(height: 24), // Spacer 대신 고정 간격 (SingleChildScrollView와 함께 Spacer는 의미 없음)
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

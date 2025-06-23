@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-// import 'package:firebase_auth/firebase_auth.dart'; // ✅ 불필요한 임포트 제거
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReservationDetailPage extends StatefulWidget {
   final Map<String, dynamic> reservation;
@@ -23,9 +23,11 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
 
   Future<void> _loadUserNickname() async {
     final userId = widget.reservation['userId'];
-    if (userId != null && userId.isNotEmpty) {
-      final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
+    final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
 
+    print("Debug UserProfile: Attempting to load nickname for userId: $userId, appId: $appId");
+
+    if (userId != null && userId.isNotEmpty) {
       try {
         final userDoc = await FirebaseFirestore.instance
             .collection('artifacts')
@@ -35,27 +37,31 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
             .get();
 
         if (userDoc.exists) {
-          setState(() {
-            _userNickname = userDoc.data()?['nickname'] ?? '알 수 없음';
-          });
+          final userDataMap = userDoc.data() as Map<String, dynamic>?;
+          _userNickname = userDataMap?['nickname'] ?? '알 수 없음';
+          print("Debug UserProfile: Nickname loaded: $_userNickname");
+          print("Debug UserProfile: Full user data from Firestore: $userDataMap");
         } else {
-          setState(() {
-            _userNickname = '사용자 정보 없음';
-          });
+          _userNickname = '사용자 정보 없음';
+          print("Debug UserProfile: User document not found at artifacts/$appId/users/$userId.");
         }
       } catch (e) {
-        print("닉네임 로딩 오류: $e");
+        _userNickname = '닉네임 불러오기 오류';
+        print("Debug UserProfile: 닉네임 로딩 오류 발생: $e");
         if (e is FirebaseException) {
-          print("Firebase Exception Code (Nickname): ${e.code}");
-          print("Firebase Exception Message (Nickname): ${e.message}");
+          print("Debug UserProfile: Firebase Exception Code (Nickname): ${e.code}");
+          print("Debug UserProfile: Firebase Exception Message (Nickname): ${e.message}");
         }
-        setState(() {
-          _userNickname = '닉네임 불러오기 오류';
-        });
       }
     } else {
+      _userNickname = 'ID 없음';
+      print("Debug UserProfile: userId is null or empty for reservation.");
+    }
+
+    if (mounted) {
       setState(() {
-        _userNickname = 'ID 없음';
+        // _isLoading 상태는 이 위젯에서 사용되지 않으므로 제거합니다.
+        // 대신 _userNickname 값의 유무로 로딩 상태를 판단합니다.
       });
     }
   }
@@ -153,6 +159,12 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     return seatNumber;
   }
 
+  String _formatCurrency(int amount) {
+    final formatter = NumberFormat('#,###', 'ko_KR');
+    return formatter.format(amount);
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final String showTitle = widget.reservation['showTitle'] ?? '정보 없음';
@@ -166,7 +178,7 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     String displayDateTime = '정보 없음';
     if (dateTimeString.isNotEmpty) {
       try {
-        final parsedDateTime = DateTime.parse(dateTimeString.replaceFirst(' ', 'T'));
+        final parsedDateTime = DateTime.parse(dateTimeString.replaceAll(' ', 'T'));
         final formattedDate = DateFormat('yyyy년 MM월 dd일').format(parsedDateTime);
         final formattedTime = DateFormat('HH시mm분').format(parsedDateTime);
         final dayOfWeek = _getDayOfWeek(parsedDateTime.weekday);
@@ -208,14 +220,14 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _infoRow('공연 제목', showTitle),
-            _infoRow('공연 일시', displayDateTime),
-            _infoRow('선택 구역', sectionName),
-            _infoRow('좌석 수', '$numberOfSeats석'),
-            _infoRow('좌석 번호', formattedSeats),
-            _infoRow('총 결제 금액', '${NumberFormat('#,###', 'ko_KR').format(totalPrice)}원'),
-            _infoRow('예매자 닉네임', _userNickname ?? '로딩 중...'),
-            _infoRow('예매 일시', reservedAt?.toString().substring(0, 19) ?? 'N/A'),
+            _buildInfoRow('공연 제목', showTitle),
+            _buildInfoRow('공연 일시', displayDateTime),
+            _buildInfoRow('선택 구역', sectionName),
+            _buildInfoRow('좌석 수', '$numberOfSeats석'),
+            _buildInfoRow('좌석 번호', formattedSeats),
+            _buildInfoRow('총 결제 금액', '${_formatCurrency(totalPrice)}원'),
+            _buildInfoRow('예매자 닉네임', _userNickname ?? '로딩 중...'), // ✅ _userNickname 사용
+            _buildInfoRow('예매 일시', reservedAt?.toString().substring(0, 19) ?? 'N/A'),
             const Spacer(),
             SizedBox(
               width: double.infinity,
@@ -241,7 +253,7 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -251,22 +263,14 @@ class _ReservationDetailPageState extends State<ReservationDetailPage> {
             width: 100,
             child: Text(
               "$label:",
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 5,
+              style: const TextStyle(fontSize: 16),
+              overflow: TextOverflow.visible,
             ),
           ),
         ],

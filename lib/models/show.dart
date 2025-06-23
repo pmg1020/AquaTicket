@@ -6,7 +6,8 @@ class Show {
   final List<String> date;
   final String venueId;
   final int maxTicketsPerUser;
-  final String? posterImageUrl; // ✅ 포스터 이미지 URL 필드 추가
+  final String? posterImageUrl;
+  final int basePrice; // ✅ 기본 가격 필드 추가
 
   Show({
     required this.id,
@@ -16,7 +17,8 @@ class Show {
     required this.date,
     required this.venueId,
     required this.maxTicketsPerUser,
-    this.posterImageUrl, // ✅ 생성자에도 추가 (선택 사항)
+    this.posterImageUrl,
+    this.basePrice = 70000, // ✅ 기본값 설정 (기본 가격 없으면 70000원)
   });
 
   factory Show.fromMap(String id, Map<String, dynamic> data) {
@@ -28,7 +30,8 @@ class Show {
       date: List<String>.from(data['date'] ?? []),
       venueId: data['venueId'] ?? '',
       maxTicketsPerUser: data['maxTicketsPerUser'] ?? 1,
-      posterImageUrl: data['posterImageUrl'], // ✅ 매핑 추가
+      posterImageUrl: data['posterImageUrl'],
+      basePrice: data['basePrice'] ?? 70000, // ✅ 매핑 추가
     );
   }
 }
