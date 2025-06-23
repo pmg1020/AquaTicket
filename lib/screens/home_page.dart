@@ -8,6 +8,7 @@ import '../admin/admin_venue_setup_page.dart';
 import '../admin/admin_show_create_page.dart';
 import '../admin/main_hall_seat_initializer_page.dart';
 import 'seat_selection/main_hall_canvas_page.dart';
+import 'user_profile_page.dart'; // ✅ UserProfilePage 임포트
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -23,7 +24,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final isAdmin = user?.email == 'admin@example.com';
+    final isAdmin = user?.email == 'admin@example.com'; // 관리자 판별
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -36,6 +37,17 @@ class HomePage extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          // ✅ 내 정보 보기 버튼 추가
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UserProfilePage()),
+              );
+            },
+            tooltip: '내 정보',
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _signOut(context),

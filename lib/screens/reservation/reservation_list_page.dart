@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/reservation_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import './reservation_detail_page.dart';
-import 'package:intl/intl.dart'; // 날짜 포맷팅을 위해 intl 패키지 필요
+import 'package:intl/intl.dart';
 
 class ReservationListPage extends StatefulWidget {
   const ReservationListPage({super.key});
@@ -25,7 +25,6 @@ class _ReservationListPageState extends State<ReservationListPage> {
     _reservationsFuture = _reservationService.getMyReservations();
   }
 
-  // 요일 변환 헬퍼 함수
   String _getDayOfWeek(int weekday) {
     switch (weekday) {
       case DateTime.monday: return '월';
@@ -78,9 +77,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
             itemCount: reservations.length,
             itemBuilder: (context, index) {
               final res = reservations[index];
-              final reservedAt = (res['reservedAt'] as Timestamp).toDate(); // 예약 시점
+              final reservedAt = (res['reservedAt'] as Timestamp).toDate();
 
-              // 예매된 공연의 날짜/시간 정보를 가져와 포맷팅
               String displayShowDateTime = '날짜 없음';
               if (res['dateTime'] != null) {
                 try {
@@ -94,8 +92,9 @@ class _ReservationListPageState extends State<ReservationListPage> {
                 }
               }
 
-              // 선택된 좌석 수
               final int numberOfSeats = (res['seats'] as List<dynamic>?)?.length ?? 0;
+              // ✅ posterImageUrl 가져오기
+              final String? posterImageUrl = res['posterImageUrl'] as String?;
 
               return GestureDetector(
                 onTap: () async {
@@ -107,7 +106,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
                   );
                   if (result == true) {
                     setState(() {
-                      _loadReservations(); // 상세 페이지에서 돌아왔을 때 목록 새로고침
+                      _loadReservations();
                     });
                   }
                 },
@@ -121,7 +120,25 @@ class _ReservationListPageState extends State<ReservationListPage> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const Icon(Icons.confirmation_num, size: 36, color: Colors.black87),
+                        // ✅ 포스터 이미지 표시 (기존 아이콘 대체)
+                        Container(
+                          width: 60,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey[200],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: posterImageUrl != null && posterImageUrl.isNotEmpty
+                              ? Image.network(
+                            posterImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(Icons.broken_image, size: 40, color: Colors.grey[400]);
+                            },
+                          )
+                              : Icon(Icons.confirmation_num, size: 40, color: Colors.grey[400]), // 이미지 없을 때 기본 아이콘
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -138,7 +155,6 @@ class _ReservationListPageState extends State<ReservationListPage> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                              // 날짜와 인원 표시를 새로운 필드와 좌석 수로 변경
                               Text(
                                 '일시: $displayShowDateTime / 좌석 수: $numberOfSeats석',
                                 style: const TextStyle(color: Colors.grey),
@@ -160,7 +176,7 @@ class _ReservationListPageState extends State<ReservationListPage> {
                               style: TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                             Text(
-                              DateFormat('yyyy-MM-dd HH:mm').format(reservedAt), // 예약일시 포맷팅
+                              DateFormat('yyyy-MM-dd HH:mm').format(reservedAt),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,

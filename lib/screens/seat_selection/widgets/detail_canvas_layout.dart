@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 class DetailCanvasLayout extends StatelessWidget {
   final String showTitle;
-  final DateTime selectedDate; // DateTime 객체로 유지
-  final String displayDateTimeString; // 포맷팅된 날짜-시간 문자열
+  final DateTime selectedDate;
+  final String displayDateTimeString; // ✅ 이 필드를 다시 추가합니다.
   final String selectedSectionName;
   final List<List<Map<String, dynamic>>> seats;
   final List<String> selectedSeats;
@@ -20,7 +20,7 @@ class DetailCanvasLayout extends StatelessWidget {
     super.key,
     required this.showTitle,
     required this.selectedDate,
-    required this.displayDateTimeString, // 생성자에서 받도록 유지
+    required this.displayDateTimeString, // ✅ 생성자에도 다시 추가합니다.
     required this.selectedSectionName,
     required this.seats,
     required this.selectedSeats,
@@ -35,7 +35,7 @@ class DetailCanvasLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 이제 이 부분에서 직접 selectedDate를 포맷팅하지 않고,
+    // 이제 이 위젯 내부에서 selectedDate를 다시 포맷팅하지 않고,
     // 이미 포맷팅되어 전달받은 displayDateTimeString을 사용합니다.
     return Column(
       children: [

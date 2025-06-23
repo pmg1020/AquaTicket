@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/reservation_model.dart';
+import '../models/show.dart'; // Show 모델 임포트 (posterImageUrl 가져오기 위함)
 
 class ReservationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 기존 reserve 메서드는 그대로 둡니다 (혹시 다른 곳에서 사용될 수 있으므로)
+  // 이전에 사용되었던 'reserve' 메서드는 현재 'reserveSeats'로 대체되었으므로 제거합니다.
+  // 만약 다른 곳에서 여전히 'reserve'를 사용한다면 이 메서드를 복원해야 합니다.
+  /*
   Future<void> reserve({
     required String showId,
     required String showTitle,
@@ -25,6 +28,7 @@ class ReservationService {
       'reservedAt': FieldValue.serverTimestamp(),
     });
   }
+  */
 
   // 새로운 예매 메서드: 개별 좌석을 업데이트하고 예매 정보를 저장
   Future<void> reserveSeats(Reservation reservation) async {
@@ -36,48 +40,19 @@ class ReservationService {
 
     final batch = _firestore.batch();
 
-    // Show ID를 통해 venueId를 가져옵니다.
+    // Show ID를 통해 posterImageUrl을 가져옵니다.
     final showDoc = await _firestore.collection('shows').doc(reservation.showId).get();
-    final venueId = showDoc.data()?['venueId'] as String?;
+    final String? showPosterImageUrl = showDoc.data()?['posterImageUrl'] as String?;
+
+    // Show ID를 통해 venueId를 가져옵니다. (기존 로직 유지)
+    final String? venueId = showDoc.data()?['venueId'] as String?;
     if (venueId == null) {
       throw Exception("공연 정보에서 공연장 ID를 찾을 수 없습니다.");
     }
 
-    // ⛔️ 중요: 좌석 문서의 isReserved 상태를 업데이트하는 로직을 제거했습니다.
-    // 예약 상태는 이제 reservations 컬렉션의 데이터 존재 여부로 판단합니다.
-    /*
-    for (String seatNumber in reservation.seats) {
-      final parts = seatNumber.split('-');
-      if (parts.length < 3) {
-        throw Exception("잘못된 좌석 번호 형식: $seatNumber");
-      }
-      final sectionName = parts[0];
+    // 좌석 문서의 isReserved 상태를 업데이트하는 로직은 현재 모델에서 제거되었으므로,
+    // 이전에 주석 처리된 해당 코드 블록도 제거합니다.
 
-      final seatRef = _firestore
-          .collection('venues')
-          .doc(venueId)
-          .collection('sections')
-          .doc(sectionName)
-          .collection('seats')
-          .doc(seatNumber);
-
-      final seatSnapshot = await seatRef.get();
-      if (seatSnapshot.exists && (seatSnapshot.data()?['isReserved'] == true)) {
-        throw Exception("선택하신 좌석 $seatNumber는 이미 예약되었습니다. 다시 시도해주세요.");
-      }
-
-      batch.update(seatRef, {
-        'isReserved': true,
-        'reservedBy': userId,
-        'reservationTime': FieldValue.serverTimestamp(),
-        'showId': reservation.showId,
-        'selectedDateTime': reservation.dateTime,
-      });
-    }
-    */
-
-    // 2. 사용자별 reservations 컬렉션에 예매 정보 추가
-    // 경로를 artifacts/{appId}/users/{userId}/reservations 로 변경
     final userReservationCollectionRef = _firestore
         .collection('artifacts')
         .doc(appId)
@@ -94,9 +69,11 @@ class ReservationService {
       'seats': reservation.seats,
       'totalPrice': reservation.totalPrice,
       'reservedAt': FieldValue.serverTimestamp(),
+      'posterImageUrl': showPosterImageUrl, // posterImageUrl 저장
     });
 
-    await batch.commit(); // 모든 배치 작업 원자적으로 실행
+    await batch.commit();
+    print("Debug ReserveSeats: Reservation batch committed successfully.");
   }
 
   // 예매 조회
@@ -120,14 +97,18 @@ class ReservationService {
           .orderBy('reservedAt', descending: true)
           .get();
 
-      print("불러온 예매 내역 수: ${snapshot.docs.length}");
+      print("Debug GetMyReservations: 불러온 예매 내역 수: ${snapshot.docs.length}");
       return snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return data;
       }).toList();
     } catch (e) {
-      print("예매 내역 불러오기 오류: $e");
+      print("Debug GetMyReservations: 예매 내역 불러오기 오류: $e");
+      if (e is FirebaseException) {
+        print("Debug GetMyReservations: Firebase Exception Code: ${e.code}");
+        print("Debug GetMyReservations: Firebase Exception Message: ${e.message}");
+      }
       return [];
     }
   }

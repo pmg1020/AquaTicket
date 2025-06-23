@@ -2,10 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance : FirebaseAuth.instance; // Re-initialize or get instance
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ signIn 메서드 다시 추가
   Future<void> signIn(String email, String password) async {
     await _auth.signInWithEmailAndPassword(
       email: email,
@@ -32,6 +31,8 @@ class AuthService {
         'email': user.email,
         'uid': user.uid,
         'nickname': nickname,
+        'name': '', // ✅ '이름(실명)' 필드 추가 (초기값 빈 문자열)
+        'contact': '', // ✅ '연락처' 필드 추가 (초기값 빈 문자열)
         'createdAt': FieldValue.serverTimestamp(),
       });
     }

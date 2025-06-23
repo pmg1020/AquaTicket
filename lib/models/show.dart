@@ -5,7 +5,8 @@ class Show {
   final String location;
   final List<String> date;
   final String venueId;
-  final int maxTicketsPerUser; // ✅ 추가
+  final int maxTicketsPerUser;
+  final String? posterImageUrl; // ✅ 포스터 이미지 URL 필드 추가
 
   Show({
     required this.id,
@@ -14,7 +15,8 @@ class Show {
     required this.location,
     required this.date,
     required this.venueId,
-    required this.maxTicketsPerUser, // ✅ 생성자에도 추가
+    required this.maxTicketsPerUser,
+    this.posterImageUrl, // ✅ 생성자에도 추가 (선택 사항)
   });
 
   factory Show.fromMap(String id, Map<String, dynamic> data) {
@@ -25,8 +27,8 @@ class Show {
       location: data['location'] ?? '',
       date: List<String>.from(data['date'] ?? []),
       venueId: data['venueId'] ?? '',
-      maxTicketsPerUser: data['maxTicketsPerUser'] ?? 1, // ✅ 매핑 추가 (기본값 1)
+      maxTicketsPerUser: data['maxTicketsPerUser'] ?? 1,
+      posterImageUrl: data['posterImageUrl'], // ✅ 매핑 추가
     );
   }
 }
-    

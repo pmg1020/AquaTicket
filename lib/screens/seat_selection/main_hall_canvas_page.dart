@@ -28,7 +28,7 @@ class MainHallCanvasPage extends StatefulWidget {
   State<MainHallCanvasPage> createState() => _MainHallCanvasPageState();
 }
 
-class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
+class _MainHallCanvasPageState extends State<MainHallCanvasPage> with WidgetsBindingObserver { // ✅ WidgetsBindingObserver 믹스인 추가
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
 
@@ -44,13 +44,20 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
   List<String> selectedSeats = [];
   int totalPrice = 0;
 
-  int _currentUserReservedCountForThisShowDateTime = 0;
+  int _currentUserReservedCountForThisShowDateTime = 0; // ✅ 상태 변수
+
+  // ✅ _currentSelectedDateTimeStringFormatted를 클래스 멤버 변수로 선언
+  late String _currentSelectedDateTimeStringFormatted;
+  // ✅ _currentSelectedDateTimeStringParseable 클래스 멤버 변수 선언
+  late String _currentSelectedDateTimeStringParseable;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // ✅ 옵저버 등록
+
     try {
       final initialDateTimeString = widget.selectedDateTime.replaceFirst(' ', 'T');
       final initialDateTime = DateTime.parse(initialDateTimeString);
@@ -61,10 +68,61 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       _selectedTime = TimeOfDay.now();
       print("초기 selectedDateTime 파싱 오류: $e. 기본값으로 설정됨: $_selectedDate $_selectedTime");
     }
-    _loadAllVenueSections();
+    _loadAllVenueSections(); // ✅ initState에서 호출 (정의는 아래에)
+    _updateDateTimeStrings(); // ✅ initState에서 호출 (정의는 아래에)
   }
 
-  Future<void> _loadAllVenueSections() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // ✅ 옵저버 해제
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) { // ✅ 앱 생명 주기 변경 감지 메서드
+    super.didChangeAppLifecycleState(state); // ✅ super 호출
+    if (state == AppLifecycleState.resumed) {
+      print("App has resumed. Refreshing data...");
+      _refreshAllDataOnResume(); // ✅ 함수 호출
+    }
+  }
+
+  // ✅ 데이터 새로고침을 위한 통합 함수 (didChangeAppLifecycleState에서 호출)
+  void _refreshAllDataOnResume() {
+    if (mounted) {
+      setState(() {
+        _selectedGrade = null;
+        _selectedSectionName = '';
+        selectedSeats = [];
+        totalPrice = 0;
+        seats = [];
+      });
+      _loadAllVenueSections();
+      if (_currentView == 'detail' && _selectedSectionName.isNotEmpty) {
+        _loadSeatsForSection(_selectedSectionName);
+      }
+      _countCurrentUserReservedCountForThisShowDateTime(); // ✅ 이곳에서도 호출
+    }
+  }
+
+
+  // ✅ _updateDateTimeStrings 헬퍼 메서드 정의
+  void _updateDateTimeStrings() {
+    final DateTime fullDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    _currentSelectedDateTimeStringFormatted =
+    "${DateFormat('yyyy년 MM월 dd일').format(_selectedDate)} (${_getDayOfWeek(_selectedDate.weekday)}) ${DateFormat('HH시mm분').format(fullDateTime)}";
+    _currentSelectedDateTimeStringParseable =
+    "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(fullDateTime)}";
+  }
+
+
+  Future<void> _loadAllVenueSections() async { // ✅ 이 메서드는 여기에 정의되어야 합니다.
     try {
       final querySnapshot = await _firestore
           .collection('venues')
@@ -83,8 +141,9 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
     }
   }
 
-  Future<void> _countCurrentUserReservedSeatsForCurrentShowDateTime() async {
-    final user = FirebaseAuth.instance.currentUser;
+  // ✅ _countCurrentUserReservedCountForThisShowDateTime 메서드 정의 시작 (여기에 있어야 합니다!)
+  Future<void> _countCurrentUserReservedCountForThisShowDateTime() async {
+    final user = FirebaseAuth.instance.currentUser; // FirebaseAuth 클래스 참조
     if (user == null) {
       print("Debug: 현재 사용자가 로그인되어 있지 않습니다. 예약 수 0으로 설정.");
       if (mounted) {
@@ -97,8 +156,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
 
     final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
     final String userId = user.uid;
-    final String currentSelectedDateTimeString =
-        "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(DateTime(0,0,0, _selectedTime.hour, _selectedTime.minute))}";
+    final String currentSelectedDateTimeString = _currentSelectedDateTimeStringParseable; // ✅ 파싱 가능한 문자열 사용
 
     try {
       final userReservationsSnapshot = await _firestore
@@ -135,6 +193,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       }
     }
   }
+  // ✅ _countCurrentUserReservedCountForThisShowDateTime 메서드 정의 끝
 
 
   void _showZoneSelectionDialog(BuildContext context, String sectionName) {
@@ -168,7 +227,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
                   });
                 }
                 _loadSeatsForSection(sectionName);
-                _countCurrentUserReservedSeatsForCurrentShowDateTime();
+                _countCurrentUserReservedCountForThisShowDateTime();
               },
               child: const Text("이동"),
             ),
@@ -181,7 +240,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
   Future<void> _loadSeatsForSection(String sectionName) async {
     try {
       final selectedDateTimeObj = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
-      final queryDateTimeString = DateFormat('yyyy-MM-dd HH:mm').format(selectedDateTimeObj); // 쿼리할 날짜/시간 문자열 형식 통일
+      final queryDateTimeString = _currentSelectedDateTimeStringParseable; // ✅ 파싱 가능한 문자열 사용
 
       print("Debug LoadSeats: Loading seats for section: $sectionName, Show ID: ${widget.showId}, Date: $queryDateTimeString");
 
@@ -217,7 +276,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
         });
       }
 
-      final String currentSelectedDateTimeString = queryDateTimeString;
+      final String currentSelectedDateTimeString = queryDateTimeString; // ✅ 파싱 가능한 문자열 사용
       print("Debug LoadSeats: Querying reservations with -> showId: ${widget.showId}, dateTime: $currentSelectedDateTimeString, section: $sectionName");
 
       Set<String> currentlyReservedSeatNumbers = {};
@@ -388,7 +447,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
   }
 
   @override
-  Widget build(BuildContext buildContext) {
+  Widget build(BuildContext buildContext) { // Changed context to buildContext to avoid name conflict in lambda
     final DateTime currentFullDateTime = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -396,8 +455,10 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
       _selectedTime.hour,
       _selectedTime.minute,
     );
-    final String currentSelectedDateTimeString =
-        "${DateFormat('yyyy-MM-dd').format(_selectedDate)} ${DateFormat('HH:mm').format(currentFullDateTime)}";
+    final String currentSelectedDateTimeStringFormatted =
+        "${DateFormat('yyyy년 MM월 dd일').format(_selectedDate)} (${_getDayOfWeek(_selectedDate.weekday)}) ${DateFormat('HH시mm분').format(currentFullDateTime)}";
+
+    _currentSelectedDateTimeStringFormatted = currentSelectedDateTimeStringFormatted; // ✅ 클래스 멤버 업데이트
 
     return Scaffold(
       appBar: AppBar(
@@ -488,7 +549,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
                   _currentView = 'detail';
                 });
               }
-              _countCurrentUserReservedSeatsForCurrentShowDateTime().then((_) {
+              _countCurrentUserReservedCountForThisShowDateTime().then((_) {
                 _loadSeatsForSection(_selectedSectionName);
               });
             }
@@ -505,7 +566,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
             : DetailCanvasLayout(
           showTitle: widget.showTitle,
           selectedDate: _selectedDate,
-          displayDateTimeString: currentSelectedDateTimeString,
+          displayDateTimeString: _currentSelectedDateTimeStringFormatted,
           selectedSectionName: _selectedSectionName,
           seats: seats,
           selectedSeats: selectedSeats,
@@ -539,7 +600,7 @@ class _MainHallCanvasPageState extends State<MainHallCanvasPage> {
                 builder: (context) => ReservationConfirmationPage(
                   showId: widget.showId,
                   showTitle: widget.showTitle,
-                  selectedDateTime: currentSelectedDateTimeString,
+                  selectedDateTime: _currentSelectedDateTimeStringParseable, // ✅ 기계 친화적인 문자열 전달 (Firestore 저장/쿼리용)
                   sectionName: _selectedSectionName,
                   selectedSeats: selectedSeats,
                   totalPrice: totalPrice,
