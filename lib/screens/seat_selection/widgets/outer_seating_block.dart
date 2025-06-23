@@ -13,7 +13,7 @@ class OuterSeatingBlock extends StatelessWidget {
   final void Function(BuildContext context, String sectionName) onBlockTap;
 
   const OuterSeatingBlock({
-    Key? key,
+    super.key, // super.key 사용
     required this.left,
     required this.top,
     required this.name,
@@ -22,9 +22,9 @@ class OuterSeatingBlock extends StatelessWidget {
     required this.capacity,
     required this.sectionFirestoreGrade,
     required this.selectedGrade,
-    this.selectedSectionName,
+    this.selectedSectionName, // 선택 사항이므로 required 제거
     required this.onBlockTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,19 +38,15 @@ class OuterSeatingBlock extends StatelessWidget {
         opacity = 0.3; // 스탠딩석 선택 시 일반석 흐리게
       } else if (selectedGrade == "일반석" && sectionFirestoreGrade == "ZONE") {
         opacity = 0.3; // 일반석 선택 시 스탠딩석(ZONE) 흐리게
+      } else {
+        opacity = 1.0;
       }
-      // 현재 블록의 등급이 선택된 등급과 일치하지 않으면 흐리게
-      // 이 로직은 selectedSectionName 강조 로직과 겹치지 않도록 주의해야 합니다.
     }
 
-    // 2. 개별 구역 선택 강조 (최우선 적용)
+    // 2. 개별 구역 선택 강조 (selectedSectionName과 일치할 경우 최우선 적용)
     if (selectedSectionName == name) {
-      blockBorder = Border.all(color: Colors.black, width: 3.0); // 선택된 구역 강조 테두리
+      blockBorder = Border.all(color: Colors.black, width: 3.0); // 굵은 검은색 테두리
       opacity = 1.0; // 선택된 구역은 항상 선명하게
-    } else if (selectedGrade != null) {
-      // 등급이 선택되었고, 현재 구역이 선택된 구역이 아니면서
-      // 현재 구역의 등급이 선택된 등급과 다르면 흐리게 (위의 opacity 로직과 통합)
-      // 이 부분은 위의 등급 투명도 로직에서 이미 처리되므로, 중복 방지를 위해 제거.
     }
 
 

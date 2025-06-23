@@ -2,8 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance : FirebaseAuth.instance; // Re-initialize or get instance
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // ✅ signIn 메서드 다시 추가
+  Future<void> signIn(String email, String password) async {
+    await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
 
   Future<void> signUp(String email, String password, String nickname) async {
     UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
@@ -13,14 +21,12 @@ class AuthService {
 
     User? user = userCredential.user;
     if (user != null) {
-      // Canvas 환경의 appId를 가져옵니다.
       final String appId = const String.fromEnvironment('APP_ID', defaultValue: 'default-app-id');
 
-      // ✅ Firestore에 사용자 정보 저장 경로 변경: artifacts/{appId}/users/{user.uid}
       await _firestore
           .collection('artifacts')
           .doc(appId)
-          .collection('users') // users 서브컬렉션
+          .collection('users')
           .doc(user.uid)
           .set({
         'email': user.email,
